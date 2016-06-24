@@ -2,41 +2,39 @@
 # ========================================= #
 # Coalescent Simulations Main               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 06/21/2016                  #
+# last update : 06/24/2016                  #
 # ========================================= #
 
 import numpy as np
-import coal_sims_def as cs_def
 import time
+import coal_sims_def as cs_def
 
 # Descriptions
 model_list  = ['Kingman', 'Bolthausen-Sznitman']
 color_list  = ['magenta', 'cyan']
-stat_list   = ['Average Number of Mutations', 'Average Number of Ancestors', 'Mean Separation Time', 'Average Height',
-              'Bottom Branch Length', 'Measure of Asymmetry using Variance Only', 'Most frequently Observed Mutation Value']
+stat_list   = ['Average Number of Mutations', 'Average Number of Ancestors', 'Bottom Branch Length']
+m           = len(stat_list)  # Number of Features
 cs_def.model_list, cs_def.color_list, cs_def.stat_list = model_list, color_list, stat_list
 
-# Simulation Parameters
+# Default Test Simulation Parameters
 sample_size = 30
 n           = 500
-mu          = 1.95
-m           = len(stat_list)  # Number of Parameters(Features)
-cs_def.sample_size, cs_def.n, cs_def.mu, cs_def.m = sample_size, n, mu, m
+mu          = 1.75
 
-# Scikit Stat Analysis Parameters
-classifier_kernel = 'linear'
+# Default Scikit Stat Analysis Parameters
 split_test_size   = 0.50
-pca_n_comp        = 2
-hist_lin_space    = 30
+classifier_kernel = 'linear'
 
-# Data Arrays
-k_list, b_list = np.zeros((n, m)), np.zeros((n, m))
+sample_size, n, mu, split_test_size = cs_def.set_parameters(sample_size, n, mu, split_test_size)
+cs_def.sample_size, cs_def.n, cs_def.mu, cs_def.m = sample_size, n, mu, m
 
 # Instructions
 draw        = False
 stat_show   = True
 if n <= 10  : draw, stat_show = True, False
-if n > 1000 : cs_def.check_n()  # warning : n might have been set unnecessarily big for a test-case
+
+# Data Arrays
+k_list, b_list = np.zeros((n, m)), np.zeros((n, m))
 
 ################################ Begin Simulation ################################
 
@@ -49,23 +47,20 @@ for i in range(n):
     cs_def.populate_coalescent_list(kingman_coalescent_list, bs_coalescent_list)
 
     # Kingman Coalescent Model Tree Construction
-    kingman_coalescent_list = cs_def.kingman_coalescence(kingman_coalescent_list, *(k_list, i))
+    kingman_ancestor = cs_def.kingman_coalescence(kingman_coalescent_list, *(k_list, i))
 
     # Bolthausen-Sznitman Coalescent Model Tree Construction
-    bs_coalescent_list = cs_def.bs_coalescence(bs_coalescent_list, *(b_list, i))
-
-    kingman_ancestor, bs_ancestor = kingman_coalescent_list[0], bs_coalescent_list[0]
+    bs_ancestor = cs_def.bs_coalescence(bs_coalescent_list, *(b_list, i))
 
     # Only if the option to display the tree has been enabled
-    if draw:    cs_def.display_tree([kingman_ancestor, bs_ancestor])
-
+    if draw:    cs_def.display_tree((kingman_ancestor, bs_ancestor))
 
 # Data Analysis & Display
 data_k, data_b = np.transpose(k_list), np.transpose(b_list)
 cs_def.display_stats(data_k, data_b, model_list, stat_list)
 
 # Plot histogram of each data
-cs_def.plot_histogram_each_data(data_k, data_b, num_linspace=hist_lin_space)
+cs_def.plot_histogram_each_data(data_k, data_b)
 
 ################################# End Simulation #################################
 
@@ -91,6 +86,6 @@ if stat_show: ############################### Begin Stat Analysis ##############
     cs_def.plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test)
 
     # PCA
-    cs_def.perform_pca(X_train_raw, X_test_raw, y, coef, n_comp=pca_n_comp)
+    cs_def.perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=True)
 
-print("\n\nProgram Execution Time :",time.process_time(),"s")
+print("\n*** Program Execution Time :",time.process_time(),"s ***\n")

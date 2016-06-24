@@ -2,21 +2,19 @@
 # ========================================= #
 # Coalescent Simulations APIs               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 06/21/2016                  #
+# last update : 06/24/2016                  #
 # ========================================= #
 
-#from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from Bio import Phylo
 from io import StringIO
-from scipy.misc import comb
 from scipy.stats import poisson
 from sklearn import preprocessing, metrics, decomposition
 from sklearn.svm import SVC
 from sklearn.cross_validation import train_test_split
 from sklearn.linear_model.logistic import LogisticRegression
 import matplotlib.pyplot as plt
-#from matplotlib import cm
 import sys
 
 ########################### Global Variables ###########################
@@ -25,12 +23,10 @@ import sys
 model_list  = None
 color_list  = None
 stat_list   = None
-sample_size = 0
-n           = 0
-mu          = 0
+sample_size = 30
+n           = 500
+mu          = 1.75
 m           = 0
-
-mut_freq    = {}  # records the occurrences of mutation values in a given tree's branches
 
 ########################### Tree Nodes ###########################
 
@@ -77,13 +73,12 @@ class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
 def kingman_coalescence(coalescent_list, *data):
     """
     models the Kingman coalescence
-    @param coalescent_list  : 1-d Array - initial coalescent list
-    @param data             : Tuple     - (data_list, data_index) -> refer to __update_data
-    @return coalescent_list : 1-d Array - updated coalescent list after a single Kingman merge
+    @param coalescent_list     : 1-d Array - initial coalescent list
+    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
+    @return coalescent_list[0] : Ancestor  - root of the Kingman tree
     """
     gen_time = np.zeros(sample_size-1)  # coalescent time for each generation
     nth_coalescence = 0  # Starting from 0
-    __clear_mutation_frequency_dict()
 
     # Until reaching the Most Recent Common Ancestor
     while np.size(coalescent_list) > 1:
@@ -95,23 +90,21 @@ def kingman_coalescence(coalescent_list, *data):
         # merged ancestor of the coalescent event and its children obtained
         consts = {'identity_count' : nth_coalescence}
         coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts )
-        # update the tree using mutations as branch length
-        # recording data along the way
+        # update the tree using mutations as branch length, recording data along the way
         lists = {'coalescent_list' : coalescent_list, 'children_list' : children_list, 'gen_time' : gen_time}
         coalescent_list = __update_children(ancestor, *data, **lists)
     coalescent_list[0].identity = 'K'
-    return coalescent_list
+    return coalescent_list[0]
 
 def bs_coalescence(coalescent_list, *data):
     """
     models the Bolthausen-Sznitman coalescence
-    @param coalescent_list  : 1-d Array - initial coalescent list
-    @param data             : Tuple     - (data_list, data_index) -> refer to __update_data
-    @return coalescent_list : 1-d Array - updated coalescent list after a single Bolthausen-Sznitman merge
+    @param coalescent_list     : 1-d Array - initial coalescent list
+    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
+    @return coalescent_list[0] : Ancestor  - root of the Bolthausen-Sznitman tree
     """
     gen_time = np.zeros(sample_size-1)  # coalescent time for each generation
     nth_coalescence = 0  # Starting from 0
-    __clear_mutation_frequency_dict()
 
     # Until reaching the Most Recent Common Ancestor
     while np.size(coalescent_list) > 1:
@@ -135,7 +128,7 @@ def bs_coalescence(coalescent_list, *data):
         lists = {'coalescent_list' : coalescent_list, 'children_list' : children_list, 'gen_time' : gen_time}
         coalescent_list = __update_children(ancestor, *data, **lists)
     coalescent_list[0].identity = 'B'
-    return coalescent_list
+    return coalescent_list[0]
 
 ########################### Internal Methods: Main Simulation ###########################
 
@@ -163,8 +156,7 @@ def __b_F(mn_rate, n):  # more detailed description needed
         total_rate += i_rate
     return mn_rate, total_rate
 
-def __update_children(ancestor, data_list, data_index,
-                      coalescent_list, children_list, gen_time):
+def __update_children(ancestor, data_list, data_index, coalescent_list, children_list, gen_time):
     """
     A.for each child node under the ancestor, do:
         1) calculate its time, taking into account the generation difference between the sample and its ancestor
@@ -180,11 +172,9 @@ def __update_children(ancestor, data_list, data_index,
     @return coalescent_list : 1-d Array - updated coalescent list
     """
     temp_list = np.copy(children_list)
-    height_list = np.zeros_like(temp_list)  # children's heights
 
     # children_index: index of changing children_list
-    # heihgt_index: index of fixed children_list
-    children_index, height_index = 0, 0
+    children_index = 0
 
     ##########################################################################################
     ### BEGIN: iteration through the children_list
@@ -192,35 +182,18 @@ def __update_children(ancestor, data_list, data_index,
         # current child under inspection
         current = temp_list[children_index]
 
-        # and define the branche length in terms of mutations
         __update_time(current, ancestor, gen_time)
         current.mutations = poisson.rvs(mu * current.time)
-        try:                mut_freq[str(current.mutations)] += 1  # a key already exists
-        except KeyError:   mut_freq[str(current.mutations)] = 1   # new key
-        # data_list[data_index][0] += current.mutations
 
         # First Case : a Sample(Leaf)
         if current.is_sample():
-            height_list[height_index] = current.mutations
-
-            # data_list[data_index][4] += current.mutations
-            heterozygosity = __heterozygosity_calculator(current, 1)
-            # data_list[data_index][2] += heterozygosity
-            __update_data(data_list, data_index, *zip((0, 2, 4), (current.mutations, heterozygosity, current.mutations)))
+            __update_data(data_list, data_index, *zip((0, 2), (current.mutations, current.mutations)))
 
         # Second Case : an Internal Node with Mutations == 0
         elif not (current.is_sample()) and current.mutations == 0:
             # Delete this Current Child from the Coalescent List
             cond = coalescent_list == temp_list[children_index]
             coalescent_list = np.delete(coalescent_list, int(np.where(cond)[0]))
-
-            # Find the Max Height among the zero node's children
-            temp_height_list = np.zeros_like(current.children_list)
-            for h in range(0, len(temp_height_list)):
-                try:                        temp_height_list[h] = current.children_list[h].height + \
-                                                                   current.children_list[h].mutations  # has height, must be an internal node ancestor
-                except AttributeError:    temp_height_list[h] = current.children_list[h].mutations   # has no height, must be a leaf sample
-            height_list[height_index] = np.amax(temp_height_list)  # highest height amongst the current child's children
 
             # Replace this Current Child with its children nodes
             temp_list = np.insert(temp_list, children_index, current.children_list)
@@ -234,10 +207,7 @@ def __update_children(ancestor, data_list, data_index,
 
         # Third Case : an Internal Node with Mutations > 0
         else:
-            height_list[height_index] = current.height + current.mutations
-            heterozygosity = __heterozygosity_calculator(current, np.size(current.descendent_list))
-            variance = __variance_distribution_calculator(current.children_list)
-            __update_data(data_list, data_index, *zip((0, 1, 2, 5), (current.mutations, 1, heterozygosity, variance)))
+            __update_data(data_list, data_index, *zip((0, 1), (current.mutations, 1)))
 
         # Delete Current Child from the Coalescent List (unless Deleted alrdy in the Second Case)
         cond = coalescent_list == temp_list[children_index]
@@ -248,18 +218,11 @@ def __update_children(ancestor, data_list, data_index,
 
         # increase indices
         children_index += 1
-        height_index += 1
     ### END: iteration through the children_list
     ##########################################################################################
 
     # Update relevant information to the ancestor
-    __update_ancestor(ancestor, temp_list, np.amax(height_list))
-
-    # If Most Recent Commont Ancestor
-    if len(coalescent_list) == 1:
-        variance = __variance_distribution_calculator(ancestor.children_list)
-        max_mut_freq = int(max(mut_freq, key=mut_freq.get))
-        __update_data(data_list, data_index, *zip((3, 5, 6), (ancestor.height, variance, max_mut_freq)))
+    __update_ancestor(ancestor, temp_list)
     return coalescent_list
 
 def __coalesce_children(coalescent_list, identity_count, num_children=2):
@@ -312,19 +275,17 @@ def __update_time(sample, ancestor, gen_time):
     for j in range(ancestor.generation - 1, sample.generation - 1, -1):
         sample.time += gen_time[j]
 
-def __update_ancestor(ancestor, children_list, height):
+def __update_ancestor(ancestor, children_list):
     """
     assigns new attributes to the merged ancestor
     @param ancestor      : Ancestor  - newly merged ancestor, represents a single coalescent event
     @param children_list : 1-d Array - nodes that are derived from the ancestor
-    @param height        : Float     - ancestor's new height
     """
     ancestor.children_list = children_list
     ancestor.descendent_list = __update_descendent_list(children_list)
     ancestor.right = children_list[np.size(children_list) - 1]
     ancestor.big_pivot = ancestor.right.big_pivot
     ancestor.left = ancestor.children_list[0]
-    ancestor.height = height
 
 def __update_data(data_list, data_index, *data):
     """
@@ -338,7 +299,6 @@ def __update_data(data_list, data_index, *data):
 
 ########################### External Methods: Statistics and Plots ###########################
 
-
 def preprocess_data(k_list, b_list, test_size):
     """
     collects data into a form usable through scikit-learn stat analysis tools
@@ -350,7 +310,7 @@ def preprocess_data(k_list, b_list, test_size):
     """
     k_label, b_label = np.zeros(n), np.ones(n)  # predicted variables, where 0: Kingman, 1 : Bolthausen-Sznitman
     X, y = np.append(k_list, b_list, axis=0), np.append(k_label, b_label, axis=0) # raw collection of data and labels that match
-    X_train_raw, X_test_raw, y_train, y_test = train_test_split(X, y, test_size=0.50)
+    X_train_raw, X_test_raw, y_train, y_test = train_test_split(X, y, test_size=test_size)
     return X, y, X_train_raw, X_test_raw, y_train, y_test
 
 def scale_X(X_train_raw, X_test_raw, y_train):
@@ -456,7 +416,7 @@ def plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
     plt.ylabel('Recall')
     plt.show()
 
-def perform_pca(X_train_raw, X_test_raw, y, coef, n_comp=2):
+def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comments
     """
     performs pca to n_comp number of components and plots the 2-d result
     @param X_train_raw : 2-d Array - refer to return of preprocess_data
@@ -465,47 +425,67 @@ def perform_pca(X_train_raw, X_test_raw, y, coef, n_comp=2):
     @param coef        : Int       - refer to return of define_classifier
     @param n_comp      : Int       - number of principal components to keep
     """
-    pca = decomposition.PCA(n_components=n_comp)  # 7 features
-    pca_temp = np.append(X_train_raw, X_test_raw, axis=0)
-    pca_X = np.zeros_like(pca_temp)
-    for i in range(len(pca_temp)):
-        pca_X[i] = __project_onto_plane(coef, pca_temp[:][i])
-    dec_pca = pca.fit_transform(pca_X)
+    pca = decomposition.PCA(n_components=1)  # 7 features
+    pca_X = np.zeros_like(X_test_raw)
+    for i in range(len(pca_X)):
+        pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
+    dec_pca = pca.fit_transform(pca_X).ravel()
 
     plt.figure()
     for i in range(len(model_list)):
-        xs = dec_pca[:, 0][y == i]
-        ys = dec_pca[:, 1][y == i]
+        xs = SVC_dec[y_test == i]
+        ys = dec_pca[y_test == i]
         plt.scatter(xs, ys, c=color_list[i], label=model_list[i])
-    plt.title('PCA')
+    plt.title('PCA 2D')
     plt.legend(loc='upper right')
     plt.show()
 
+    # optional
+    if three_d:
+        pca = decomposition.PCA(n_components=2)  # 7 features
+        pca_X = np.zeros_like(X_test_raw)
+        for i in range(len(pca_X)):
+            pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
+        dec_pca = pca.fit_transform(pca_X)
+
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.gca(projection='3d')
+        plt.rcParams['legend.fontsize'] = 10
+        for i in range(len(model_list)):
+            xs = dec_pca[:, 0][y_test == i]
+            ys = dec_pca[:, 1][y_test == i]
+            zs = SVC_dec[y_test == i]
+            ax.scatter(xs, ys, zs, alpha=0.5, c=color_list[i], label=model_list[i])
+        ax.set_xlabel('First Principal Component')
+        ax.set_ylabel('Second Principal Component')
+        ax.set_zlabel('Hyperplane Decision Function')
+        plt.title('PCA 3D')
+        ax.legend(bbox_to_anchor=(0.35, 0.9))
+        plt.show()
+
 ########################### External Methods: Miscellaneous ###########################
 
-def check_n():
+def set_parameters(sample_size=30, n=500, mu=1.75, split_test_size=0.50):
     """
-    confirms whether the user really desires the current n value
+    sets the custom values of parameters by receiving user inputs, if instructed to do so
+    @param sample_size     : Int   - default sample size
+    @param n               : Int   - default n
+    @param mu              : Float - default mu
+    @param split_test_size : Float - default split test size
+    @return                : Tuple - ( sample_size     : Int   : custom sample size
+                                       n               : Int   : custom n
+                                       mu              : Float : custom mu
+                                       split_test_size : Float : custom split test size )
     """
-    ans = str(input("Are you sure? Type \"yes\" if so: "))
-    if ans == "yes":
-        pass
-    elif ans == "no":
-        print("Exiting..")
-        sys.exit(0)
-    else:
-        counter = 0
-        while True:
-            ans = str(input("Are you sure? Type \"yes\" if so: "))
-            if ans == "yes":
-                break
-            elif ans == "no":
-                print("Exiting..")
-                sys.exit(0)
-            counter += 1
-            if counter >= 1:
-                print("Exiting..")
-                sys.exit(0)
+
+    direction = str(input("Run with default values? \"custom\" for custom parameters values : "))
+    if "custom" in direction or "no" in direction:
+        sample_size       = __request_user_input("sample size", "int")
+        n                 = __request_user_input("n", "int")
+        mu                = __request_user_input("mutation rate", "float")
+        split_test_size   = __request_user_input("split test size", "float")
+    if n > 1000: __check_n()  # warning : n might have been set unnecessarily big for a test-case
+    return sample_size, n, mu, split_test_size
 
 def populate_coalescent_list(kingman_coalescent_list, bs_coalescent_list):
     """
@@ -533,7 +513,7 @@ def display_stats(data_k, data_b, model_list, stat_list):
         for stat_label, mean, std in zip(stat_list, means, stds):
             print(model_name, stat_label, ":", mean, ",", std)
         print()
-    print("((Kingman vs. Bolthausen-Sznitman)) Side-by-Side Comparison :")
+    print("<<Kingman vs. Bolthausen-Sznitman>> Side-by-Side Comparison :")
     for i in range(m):
         print(stat_list[i], ":\n", k_stats[0][i], " vs.", b_stats[0][i],
               "\n", k_stats[1][i], "    ", b_stats[1][i])
@@ -558,6 +538,62 @@ def plot_histogram_each_data(data_k, data_b, num_linspace=30):
         plt.show()
 
 ########################### Internal Methods: Miscellaneous ###########################
+
+def __request_user_input(value_name, data_type, *args, multiple_choice=False):
+    """
+    handles user input
+    @param value_name      : String       - value name
+    @param data_type       : String       - dtype
+    @param args            : Tuple        - pre-defined options for multiple choice
+    @param multiple_choice : Bool         - lists options if True
+    @return value          : Int / String - result that matches user input
+    """
+    accepted_range = " >= 0"
+    if multiple_choice:
+        print("Available options:")
+        _range = ()
+        diction = dict(args)
+        for arg1, arg2 in args:
+            print(arg1, ":", arg2)
+            _range += (arg1,)
+        accepted_range = " in _range"
+    while True:
+        value = input("Please write custom value for " + value_name + " (only " + data_type + " accepted): ")
+        try:
+            value = float(value) if "float" in data_type else int(value)
+            if eval(str(value) + accepted_range):
+                if multiple_choice:  value = diction[value]
+                break
+            else:
+                print("Value outside of the Accepted Range")
+        except ValueError:
+            print("Wrong Input, please write", data_type,"for", value_name)
+    print("Your input for", value_name, ":", value)
+    return value
+
+def __check_n():
+    """
+    confirms whether the user really desires the current n value
+    """
+    ans = str(input("Are you sure? Type \"yes\" if so: "))
+    if ans == "yes":
+        pass
+    elif ans == "no":
+        print("Exiting..")
+        sys.exit(0)
+    else:
+        counter = 0
+        while True:
+            ans = str(input("Are you sure? Type \"yes\" if so: "))
+            if ans == "yes":
+                break
+            elif ans == "no":
+                print("Exiting..")
+                sys.exit(0)
+            counter += 1
+            if counter >= 1:
+                print("Exiting..")
+                sys.exit(0)
 
 def __quicksort(children_list, first, last):
     """
@@ -593,30 +629,6 @@ def __partition(children_list, first, last):
     children_list[first], children_list[hi] = children_list[hi], part
     return hi
 
-def __heterozygosity_calculator(sample, k):
-    """
-    calculates heterozygosity, or mean separation time
-    @param sample : Ancestor / Sample - node at which heterozygosity will be computed
-    @param k      : Int               - number of samples below this 'sample' -> 1 if it is itself a sample
-    @return       : Float             - heterozygosity
-    """
-    b = comb(sample_size, 2)
-    a = k * (sample_size - k)
-    return a / b * sample.mutations
-
-def __variance_distribution_calculator(children_list):
-    """
-    calculates variance distribution of children's descendants
-    @param children_list: 1-d Array - to be iterated once
-    @return             : Float     - variance
-    """
-    var_dist = np.zeros_like(children_list)
-    # for each children, check how many samples/descendents are below it, and use 1 if it is a sample itself
-    for i in range(len(var_dist)):
-        if children_list[i].is_sample():    var_dist[i] = 1
-        else:                               var_dist[i] = len(children_list[i].descendent_list)
-    return np.var(var_dist)
-
 def __project_onto_plane(a, b):
     """
     finds the vector projection of points onto the hyperplane
@@ -628,13 +640,18 @@ def __project_onto_plane(a, b):
     p = dot * a / np.linalg.norm(a)
     return b - p
 
-def __clear_mutation_frequency_dict():
-    """
-    clears the dictionary for each incoming tree
-    """
-    mut_freq.clear()
-
 ########################### Optional : Display Tool ###########################
+
+def display_tree(ancestors):
+    """
+    displays the Newick Format in string Newick format and its Phylo visualization
+    @param ancestors : 1-d Array - root of the tree to be displayed
+    """
+    for i in range(len(ancestors)):
+        newick = __traversal(ancestors[i])
+        tree = Phylo.read(StringIO(str(newick)), 'newick')
+        Phylo.draw(tree)
+        print(newick)
 
 def __traversal(sample):
     """
@@ -671,14 +688,3 @@ def __recur_traversal(output, sample):
     output = __recur_traversal((output + ', '), current)
     output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
     return output
-
-def display_tree(ancestors):
-    """
-    displays the Newick Format in string Newick format and its Phylo visualization
-    @param ancestors : 1-d Array - root of the tree to be displayed
-    """
-    for i in range(len(ancestors)):
-        newick = __traversal(ancestors[i])
-        tree = Phylo.read(StringIO(str(newick)), 'newick')
-        Phylo.draw(tree)
-        print(newick)
