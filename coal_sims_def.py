@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations APIs               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 06/24/2016                  #
+# last update : 06/26/2016                  #
 # ========================================= #
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -20,13 +20,15 @@ import sys
 ########################### Global Variables ###########################
 
 # will be initialized as defined in main program
-model_list  = None
-color_list  = None
-stat_list   = None
-sample_size = 30
-n           = 500
-mu          = 1.75
-m           = 0
+model_list     = None
+color_list     = None
+stat_list      = None
+param_list     = None
+sample_size    = 0
+n              = 0
+mu             = 0
+m              = 0
+num_desc_thold = 0
 
 ########################### Tree Nodes ###########################
 
@@ -35,12 +37,12 @@ class Sample:  # Leaf of Tree
         """
         @param identity_count: Int - unique ID number to distinguish this sample from the rest
         """
-        self.identity = identity_count  # unique identity of each sample
+        self.identity = identity_count   # unique identity of each sample
         self.big_pivot = identity_count  # Conforms to usual visualization
-        self.next = None  # links to its left neighbor child of its parent
-        self.time = 0  # time to the previous coalescent event
-        self.generation = 0  # each coalescent event represents a generation, beginning from the bottom of the tree
-        self.mutations = 0  # mutations that occurred from the previous coalescent event
+        self.next = None                 # links to its left neighbor child of its parent
+        self.time = 0                    # time to the previous coalescent event
+        self.generation = 0              # each coalescent event represents a generation, beginning from the bottom of the tree
+        self.mutations = 0               # mutations that occurred from the previous coalescent event
 
     def __repr__(self):
         return 'Sample {} with Mutations {:d}.'.format(self.identity, self.mutations)
@@ -57,10 +59,10 @@ class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
         self.identity = 'A{}'.format(identity_count)
         self.generation = identity_count
         self.height = 0
-        self.left = None  # left-most child
-        self.right = None  # right-most child
+        self.left = None                    # left-most child
+        self.right = None                   # right-most child
         self.descendent_list = np.zeros(0)  # all samples below it
-        self.children_list = np.zeros(0)  # all children directly below it
+        self.children_list = np.zeros(0)    # all children directly below it
 
     def __repr__(self):
         return 'Ancestor {} with Mutations {:d}.'.format(self.identity, self.mutations)
@@ -94,6 +96,7 @@ def kingman_coalescence(coalescent_list, *data):
         lists = {'coalescent_list' : coalescent_list, 'children_list' : children_list, 'gen_time' : gen_time}
         coalescent_list = __update_children(ancestor, *data, **lists)
     coalescent_list[0].identity = 'K'
+    #print(coalescent_list[0], "This tree's branch length under threshold is:", data[0][data[1]][3])
     return coalescent_list[0]
 
 def bs_coalescence(coalescent_list, *data):
@@ -123,11 +126,11 @@ def bs_coalescence(coalescent_list, *data):
         # merged ancestor of the coalescent event and its children obtained
         consts = {'identity_count' : nth_coalescence, 'num_children' : num_children}
         coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts)
-        # update the tree using mutations as branch length
-        # recording data along the way
+        # update the tree using mutations as branch length, recording data along the way
         lists = {'coalescent_list' : coalescent_list, 'children_list' : children_list, 'gen_time' : gen_time}
         coalescent_list = __update_children(ancestor, *data, **lists)
     coalescent_list[0].identity = 'B'
+    #print(coalescent_list[0], "This tree's branch length under threshold is:", data[0][data[1]][3])
     return coalescent_list[0]
 
 ########################### Internal Methods: Main Simulation ###########################
@@ -207,7 +210,10 @@ def __update_children(ancestor, data_list, data_index, coalescent_list, children
 
         # Third Case : an Internal Node with Mutations > 0
         else:
-            __update_data(data_list, data_index, *zip((0, 1), (current.mutations, 1)))
+            if len(current.descendent_list) >= np.around(sample_size * num_desc_thold):
+                __update_data(data_list, data_index, *zip((0, 1, 3), (current.mutations, 1, current.mutations)))
+            else:
+                __update_data(data_list, data_index, *zip((0, 1), (current.mutations, 1)))
 
         # Delete Current Child from the Coalescent List (unless Deleted alrdy in the Second Case)
         cond = coalescent_list == temp_list[children_index]
@@ -221,7 +227,7 @@ def __update_children(ancestor, data_list, data_index, coalescent_list, children
     ### END: iteration through the children_list
     ##########################################################################################
 
-    # Update relevant information to the ancestor
+    # Update new information to the ancestor
     __update_ancestor(ancestor, temp_list)
     return coalescent_list
 
@@ -465,27 +471,25 @@ def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comme
 
 ########################### External Methods: Miscellaneous ###########################
 
-def set_parameters(sample_size=30, n=500, mu=1.75, split_test_size=0.50):
+def set_parameters(default_val):
     """
     sets the custom values of parameters by receiving user inputs, if instructed to do so
-    @param sample_size     : Int   - default sample size
-    @param n               : Int   - default n
-    @param mu              : Float - default mu
-    @param split_test_size : Float - default split test size
-    @return                : Tuple - ( sample_size     : Int   : custom sample size
-                                       n               : Int   : custom n
-                                       mu              : Float : custom mu
-                                       split_test_size : Float : custom split test size )
+    @param default_val : Tuple - default initial parameter values
+    @return            : List  - returns (possibly changed) parameter values
     """
-
     direction = str(input("Run with default values? \"custom\" for custom parameters values : "))
+    return_val = list(default_val)
     if "custom" in direction or "no" in direction:
-        sample_size       = __request_user_input("sample size", "int")
-        n                 = __request_user_input("n", "int")
-        mu                = __request_user_input("mutation rate", "float")
-        split_test_size   = __request_user_input("split test size", "float")
+        for i, vals in enumerate(zip(param_list, default_val)):
+            exec("return_val[i] = __request_user_input(vals)")
     if n > 1000: __check_n()  # warning : n might have been set unnecessarily big for a test-case
-    return sample_size, n, mu, split_test_size
+    return return_val
+
+def display_init_params():
+    print("\n****** Running with: ******")
+    for label, val in zip(param_list, (sample_size, n, mu, num_desc_thold)):
+        print("   ",label, ":", val)
+    print()
 
 def populate_coalescent_list(kingman_coalescent_list, bs_coalescent_list):
     """
@@ -539,16 +543,16 @@ def plot_histogram_each_data(data_k, data_b, num_linspace=30):
 
 ########################### Internal Methods: Miscellaneous ###########################
 
-def __request_user_input(value_name, data_type, *args, multiple_choice=False):
+def __request_user_input(vals, *args, multiple_choice=False):
     """
     handles user input
-    @param value_name      : String       - value name
-    @param data_type       : String       - dtype
-    @param args            : Tuple        - pre-defined options for multiple choice
-    @param multiple_choice : Bool         - lists options if True
-    @return value          : Int / String - result that matches user input
+    @param vals            : List        - holds data name and default data value
+    @param args            : Tuple       - pre-defined options for multiple choice
+    @param multiple_choice : Bool        - lists options if True
+    @return value          : Int / Float - result that matches user input
     """
     accepted_range = " >= 0"
+    value_name, data_type = vals[0], str(type(vals[1])).split("\'")[1]
     if multiple_choice:
         print("Available options:")
         _range = ()

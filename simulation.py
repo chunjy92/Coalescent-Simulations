@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations Main               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 06/24/2016                  #
+# last update : 06/26/2016                  #
 # ========================================= #
 
 import numpy as np
@@ -12,21 +12,28 @@ import coal_sims_def as cs_def
 # Descriptions
 model_list  = ['Kingman', 'Bolthausen-Sznitman']
 color_list  = ['magenta', 'cyan']
-stat_list   = ['Average Number of Mutations', 'Average Number of Ancestors', 'Bottom Branch Length']
+stat_list   = ['Average Number of Mutations', 'Average Number of Ancestors', 'Bottom Branch Length', 'Threshold Branch Length']
 m           = len(stat_list)  # Number of Features
-cs_def.model_list, cs_def.color_list, cs_def.stat_list = model_list, color_list, stat_list
+
+param_list  = ["sample_size", "n", "mu", "num_desc_thold"]
+cs_def.model_list, cs_def.color_list, cs_def.stat_list, cs_def.param_list = model_list, color_list, stat_list, param_list
 
 # Default Test Simulation Parameters
-sample_size = 30
-n           = 500
-mu          = 1.75
+default_val = (30, 500, 1.75, 0.80)
+
+# For Testing Algorithm -- Uncomment the second line for use
+test_parameter = (10, 5, 1.75, 0.5)
+test_parameter = 0
+
+if test_parameter:  sample_size, n, mu, num_desc_thold = test_parameter
+else:               sample_size, n, mu, num_desc_thold = cs_def.set_parameters(default_val)
+
+cs_def.sample_size, cs_def.n, cs_def.mu, cs_def.m, cs_def.num_desc_thold = sample_size, n, mu, m, num_desc_thold
+cs_def.display_init_params()
 
 # Default Scikit Stat Analysis Parameters
 split_test_size   = 0.50
 classifier_kernel = 'linear'
-
-sample_size, n, mu, split_test_size = cs_def.set_parameters(sample_size, n, mu, split_test_size)
-cs_def.sample_size, cs_def.n, cs_def.mu, cs_def.m = sample_size, n, mu, m
 
 # Instructions
 draw        = False
