@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations APIs               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 06/26/2016                  #
+# last update : 06/29/2016                  #
 # ========================================= #
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -27,10 +27,9 @@ param_list     = None
 sample_size    = 0
 n              = 0
 mu             = 0
-m              = 0
-num_desc_thold = 0
+num_feature    = 0
 
-########################### Tree Nodes ###########################
+########################### Tree Node Objects ###########################
 
 class Sample:  # Leaf of Tree
     def __init__(self, identity_count):
@@ -70,70 +69,41 @@ class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
     def is_sample(self):
         return False
 
-########################### External Methods: Main Simulation ###########################
+########################### Main Simulation ###########################
 
-def kingman_coalescence(coalescent_list, *data):
+def simulation(newick=False, plot_data=False):
     """
-    models the Kingman coalescence
-    @param coalescent_list     : 1-d Array - initial coalescent list
-    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
-    @return coalescent_list[0] : Ancestor  - root of the Kingman tree
+    simulates the Kingmand and Bolthausen coalescence
+    @param data   : Tuple - (kingman_data, bolthausen-sznitman_data) empty 2-d arrays to hold data extracted from each model trees
+    @param newick : Bool  - whether to display the tree in newick format or not
+    @return       : Tuple - (k_list, b_list : 2-d Array - holds data collected from kingman coalescence and bolthausen-sznitman coalescence)
     """
-    gen_time = np.zeros(sample_size-1)  # coalescent time for each generation
-    nth_coalescence = 0  # Starting from 0
+    k_list, b_list = np.zeros((n, num_feature)), np.zeros((n, num_feature))
+    for i in range(n):
+        # Populate the lists with samples
+        kingman_coalescent_list, bs_coalescent_list = __init_coalescent_list()
 
-    # Until reaching the Most Recent Common Ancestor
-    while np.size(coalescent_list) > 1:
-        # Time Calculation
-        time = np.random.exponential(1/__k_F(np.size(coalescent_list)))
-        gen_time[nth_coalescence] = time
-        nth_coalescence += 1
+        # Kingman Coalescence
+        __kingman_coalescence(kingman_coalescent_list, *(k_list, i), newick=newick)
 
-        # merged ancestor of the coalescent event and its children obtained
-        consts = {'identity_count' : nth_coalescence}
-        coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts )
-        # update the tree using mutations as branch length, recording data along the way
-        lists = {'coalescent_list' : coalescent_list, 'children_list' : children_list, 'gen_time' : gen_time}
-        coalescent_list = __update_children(ancestor, *data, **lists)
-    coalescent_list[0].identity = 'K'
-    #print(coalescent_list[0], "This tree's branch length under threshold is:", data[0][data[1]][3])
-    return coalescent_list[0]
+        # Bolthausen-Sznitman Coalescence
+        __bs_coalescence(bs_coalescent_list, *(b_list, i), newick=newick)
 
-def bs_coalescence(coalescent_list, *data):
+    data_k, data_b = np.transpose(k_list), np.transpose(b_list)
+    __display_stats(data_k, data_b, model_list, stat_list)
+
+    # Plot histogram of each data
+    if plot_data:
+        __plot_histogram_each_data(data_k, data_b)
+    return k_list, b_list
+
+def __init_coalescent_list():
     """
-    models the Bolthausen-Sznitman coalescence
-    @param coalescent_list     : 1-d Array - initial coalescent list
-    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
-    @return coalescent_list[0] : Ancestor  - root of the Bolthausen-Sznitman tree
+    initializes coalescent lists for Kingman and Bolthausen-Sznitman simulation
+    @return: Tuple - ( 1-d Array - Kingman coalescent_list
+                       1-d Array - Bolthausen-Sznitman coalescent_list
     """
-    gen_time = np.zeros(sample_size-1)  # coalescent time for each generation
-    nth_coalescence = 0  # Starting from 0
-
-    # Until reaching the Most Recent Common Ancestor
-    while np.size(coalescent_list) > 1:
-        # Time and Number of Children Calculation
-        m_list = np.arange(2, np.size(coalescent_list)+1)
-        mn_rate = np.zeros(np.size(coalescent_list)-1)
-        bsf_rate = np.zeros(np.size(coalescent_list)-1)
-        mn_rate, total_rate = __b_F(mn_rate, np.size(coalescent_list))
-        for j in range(0, np.size(mn_rate)):
-            bsf_rate[j] = mn_rate[j] / total_rate
-        num_children = np.random.choice(m_list, 1, replace=False, p=bsf_rate)
-        time = np.random.exponential(1/total_rate)
-        gen_time[nth_coalescence] = time
-        nth_coalescence += 1
-
-        # merged ancestor of the coalescent event and its children obtained
-        consts = {'identity_count' : nth_coalescence, 'num_children' : num_children}
-        coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts)
-        # update the tree using mutations as branch length, recording data along the way
-        lists = {'coalescent_list' : coalescent_list, 'children_list' : children_list, 'gen_time' : gen_time}
-        coalescent_list = __update_children(ancestor, *data, **lists)
-    coalescent_list[0].identity = 'B'
-    #print(coalescent_list[0], "This tree's branch length under threshold is:", data[0][data[1]][3])
-    return coalescent_list[0]
-
-########################### Internal Methods: Main Simulation ###########################
+    return np.array([Sample(i+1) for i in range(sample_size)]), np.array([Sample(i+1) for i in range(sample_size)])
 
 def __k_F(n):
     """
@@ -158,6 +128,71 @@ def __b_F(mn_rate, n):  # more detailed description needed
         mn_rate[i] = i_rate
         total_rate += i_rate
     return mn_rate, total_rate
+
+def __kingman_coalescence(coalescent_list, *data, newick=False):
+    """
+    models the Kingman coalescence
+    @param coalescent_list     : 1-d Array - holds samples
+    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
+    @param newick              : Bool      - refer to argument of simulation
+    """
+    gen_time = np.zeros(sample_size - 1)  # coalescent time for each generation
+    nth_coalescence = 0  # Starting from 0
+
+    # Until reaching the Most Recent Common Ancestor
+    while np.size(coalescent_list) > 1:
+        # Time Calculation
+        time = np.random.exponential(1 / __k_F(np.size(coalescent_list)))
+        gen_time[nth_coalescence] = time
+        nth_coalescence += 1
+
+        # merged ancestor of the coalescent event and its children obtained
+        consts = {'identity_count': nth_coalescence}
+        coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts)
+
+        # update the tree using mutations as branch length, recording data along the way
+        lists = {'coalescent_list': coalescent_list, 'children_list': children_list, 'gen_time': gen_time}
+        coalescent_list = __update_children(ancestor, *data, **lists)
+    if newick:
+        mrca = coalescent_list[0]
+        mrca.identity = mrca.identity.replace('A', 'K')
+        __display_tree(mrca)
+
+def __bs_coalescence(coalescent_list, *data, newick=False):
+    """
+    models the Bolthausen-Sznitman coalescence
+    @param coalescent_list     : 1-d Array - holds samples
+    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
+    @param newick              : Bool      - refer to argument of simulation
+    """
+    gen_time = np.zeros(sample_size - 1)  # coalescent time for each generation
+    nth_coalescence = 0  # Starting from 0
+
+    # Until reaching the Most Recent Common Ancestor
+    while np.size(coalescent_list) > 1:
+        # Time and Number of Children Calculation
+        m_list = np.arange(2, np.size(coalescent_list) + 1)
+        mn_rate = np.zeros(np.size(coalescent_list) - 1)
+        bsf_rate = np.zeros(np.size(coalescent_list) - 1)
+        mn_rate, total_rate = __b_F(mn_rate, np.size(coalescent_list))
+        for j in range(0, np.size(mn_rate)):
+            bsf_rate[j] = mn_rate[j] / total_rate
+        num_children = np.random.choice(m_list, 1, replace=False, p=bsf_rate)
+        time = np.random.exponential(1 / total_rate)
+        gen_time[nth_coalescence] = time
+        nth_coalescence += 1
+
+        # merged ancestor of the coalescent event and its children obtained
+        consts = {'identity_count': nth_coalescence, 'num_children': num_children}
+        coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts)
+
+        # update the tree using mutations as branch length, recording data along the way
+        lists = {'coalescent_list': coalescent_list, 'children_list': children_list, 'gen_time': gen_time}
+        coalescent_list = __update_children(ancestor, *data, **lists)
+    if newick:
+        mrca = coalescent_list[0]
+        mrca.identity = mrca.identity.replace('A', 'B')
+        __display_tree(mrca)
 
 def __update_children(ancestor, data_list, data_index, coalescent_list, children_list, gen_time):
     """
@@ -190,7 +225,7 @@ def __update_children(ancestor, data_list, data_index, coalescent_list, children
 
         # First Case : a Sample(Leaf)
         if current.is_sample():
-            __update_data(data_list, data_index, *zip((0, 2), (current.mutations, current.mutations)))
+            __update_data(data_list, data_index, *zip((0, 1), (current.mutations, current.mutations)))
 
         # Second Case : an Internal Node with Mutations == 0
         elif not (current.is_sample()) and current.mutations == 0:
@@ -210,17 +245,16 @@ def __update_children(ancestor, data_list, data_index, coalescent_list, children
 
         # Third Case : an Internal Node with Mutations > 0
         else:
-            if len(current.descendent_list) >= np.around(sample_size * num_desc_thold):
-                __update_data(data_list, data_index, *zip((0, 1, 3), (current.mutations, 1, current.mutations)))
-            else:
-                __update_data(data_list, data_index, *zip((0, 1), (current.mutations, 1)))
+            __update_data(data_list, data_index, *zip((0,), (current.mutations,)))
 
         # Delete Current Child from the Coalescent List (unless Deleted alrdy in the Second Case)
         cond = coalescent_list == temp_list[children_index]
-        if True in cond:        coalescent_list = np.delete(coalescent_list, int(np.where(cond)[0]))
+        if True in cond:
+            coalescent_list = np.delete(coalescent_list, int(np.where(cond)[0]))
 
         # Link current child to its left
-        if children_index > 0:  current.next = temp_list[children_index - 1]
+        if children_index > 0:
+            current.next = temp_list[children_index - 1]
 
         # increase indices
         children_index += 1
@@ -303,14 +337,45 @@ def __update_data(data_list, data_index, *data):
     for index, value in data:
         data_list[data_index][index] += value
 
-########################### External Methods: Statistics and Plots ###########################
+########################### Machine Learning Statistics and Plots ###########################
 
-def preprocess_data(k_list, b_list, test_size):
+def perform_ml(k_list, b_list, test_size=0.25, classifier_kernel='linear', pca_three_d=False):
+    """
+    performs machine learning on data collected from simulation using scikit-learn library
+    @param k_list            : 2-d Array - refer to return of simulation
+    @param b_list            : 2-d Array - refer to return of simulation
+    @param test_size         : Int       - defines how the data is to be randomly split
+    @param classifier_kernel : String    - defines the kernel type of the classifier
+    @param pca_three_d       : Bool      - defines whether to print 3-d version of PCA
+    """
+    # Preprocessing data by splitting accordingly and scaling it
+    X, y, X_train_raw, X_test_raw, y_train, y_test = __preprocess_data(k_list, b_list, test_size=test_size)
+    X_train_scaled, X_test_scaled = __scale_X(X_train_raw, X_test_raw, y_train)
+
+    # Define Classifier, train it and get its properties
+    SVC_clf, coef, intercept = __define_classifier(X_train_scaled, y_train, kernel=classifier_kernel)
+
+    # Get distances of each vector from the separating hyperplane
+    SVC_dec, k_dec, b_dec = __get_decision_function(SVC_clf, X_test_scaled, y_test)
+
+    # Accuracy Test
+    __test_accuracy(SVC_clf, X_train_scaled, y_train, X_test_scaled, y_test)
+
+    # Histogram
+    __plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec)
+
+    # ROC Curve
+    __plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test)
+
+    # PCA
+    __perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=pca_three_d)
+
+def __preprocess_data(k_list, b_list, test_size):
     """
     collects data into a form usable through scikit-learn stat analysis tools
-    @param k_list    : 2-d Array - holds raw Kingman data
-    @param b_list    : 2-d Array - holds raw Bolthausen-Sznitman data
-    @param test_size : Int       - defines how the data is to be randomly split
+    @param k_list    : 2-d Array - refer to return of simulation
+    @param b_list    : 2-d Array - refer to return of simulation
+    @param test_size : Int       - refer to argument of perform_ml
     @return          : Tuple     - (raw data collection X, raw prediction label collection y, X to be trained,
                                     X to be tested, label for train data, label for test data)
     """
@@ -319,12 +384,12 @@ def preprocess_data(k_list, b_list, test_size):
     X_train_raw, X_test_raw, y_train, y_test = train_test_split(X, y, test_size=test_size)
     return X, y, X_train_raw, X_test_raw, y_train, y_test
 
-def scale_X(X_train_raw, X_test_raw, y_train):
+def __scale_X(X_train_raw, X_test_raw, y_train):
     """
     define a scaler and scale each X
-    @param X_train_raw : 2-d Array - refer to return of preprocess_data
-    @param X_test_raw  : 2-d Array - refer to return of preprocess_data
-    @param y_train     : 1-d Array - refer to return of preprocess_data
+    @param X_train_raw : 2-d Array - refer to return of __preprocess_data
+    @param X_test_raw  : 2-d Array - refer to return of __preprocess_data
+    @param y_train     : 1-d Array - refer to return of __preprocess_data
     @return            : Tuple     - ( X_train_scaled : 2-d Array - scaled X train data
                                        X_test_scaled  : 2-d Array - scaled X test data )
     """
@@ -333,12 +398,12 @@ def scale_X(X_train_raw, X_test_raw, y_train):
     X_test_scaled  = scaler.transform(X_test_raw)
     return X_train_scaled, X_test_scaled
 
-def define_classifier(X_train_scaled, y_train, kernel='linear'):
+def __define_classifier(X_train_scaled, y_train, kernel='linear'):
     """
     defines a classifier, fits to train data and get its properties
-    @param X_train_scaled : 2-d Array - refer to return of preprocess_data
-    @param y_train        : 1-d Array - refer to return of preprocess_data
-    @param kernel         : String    - defines the kernel type of the classifier
+    @param X_train_scaled : 2-d Array - refer to return of __preprocess_data
+    @param y_train        : 1-d Array - refer to return of __preprocess_data
+    @param kernel         : String    - refer to simulation
     @return               : Tuple     - ( SVC_clf   : Classifier - support vector classifier
                                           coef      : Tuple      - linear coefficients of the separating hyperplane
                                           intercept : Int        - intercept of the hyperplane )
@@ -350,12 +415,12 @@ def define_classifier(X_train_scaled, y_train, kernel='linear'):
     print("Intercept:", intercept)
     return SVC_clf, coef, intercept
 
-def get_decision_function(clf, X_test_scaled, y_test):
+def __get_decision_function(clf, X_test_scaled, y_test):
     """
     returns the decision functions
-    @param clf           : Classifier - refer to return of define_classifier
-    @param X_test_scaled : 2-d Array  - refer to return of scale_X
-    @param y_test        : 1-d Array  - refer to return of preprocess_data
+    @param clf           : Classifier - refer to return of __define_classifier
+    @param X_test_scaled : 2-d Array  - refer to return of __scale_X
+    @param y_test        : 1-d Array  - refer to return of __preprocess_data
     @return              : Tuple      - ( SVC_dec : 1-d Array - entire decision function
                                           k_dec   : 1-d Array - Kingman decision function
                                           b_dec   : 1-d Array - Bolthausen-Sznitman decision function )
@@ -366,26 +431,26 @@ def get_decision_function(clf, X_test_scaled, y_test):
     print(model_list[1], "Decision Function Mean:", np.mean(b_dec))
     return SVC_dec, k_dec, b_dec
 
-def test_accuracy(clf, X_train_scaled, y_train, X_test_scaled, y_test):
+def __test_accuracy(clf, X_train_scaled, y_train, X_test_scaled, y_test):
     """
     tests the accuracy of the classifier, using the test data
-    @param clf            : Classifier - refer to return of define_classifier
-    @param X_train_scaled : 2-d Array  - refer to return of scale_X
-    @param y_train        : 1-d Array  - refer to return of preprocess_data
-    @param X_test_scaled  : 2-d Array  - refer to return of scale_X
-    @param y_test         : 1-d Array  - refer to return of preprocess_data
+    @param clf            : Classifier - refer to return of __define_classifier
+    @param X_train_scaled : 2-d Array  - refer to return of __scale_X
+    @param y_train        : 1-d Array  - refer to return of __preprocess_data
+    @param X_test_scaled  : 2-d Array  - refer to return of __scale_X
+    @param y_test         : 1-d Array  - refer to return of __preprocess_data
     """
     y_train_pred = clf.predict(X_train_scaled)
     print("Train Set Accuracy :", metrics.accuracy_score(y_train, y_train_pred))
     y_pred = clf.predict(X_test_scaled)
     print("Test Set Accuracy  :", metrics.accuracy_score(y_test, y_pred))
 
-def plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
+def __plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
     """
     plots histogram for the decision function produced by SVC
-    @param SVC_dec : 1-d Array - refer to return of get_decision_function
-    @param k_dec   : 1-d Array - refer to return of get_decision_function
-    @param b_dec   : 1-d Array - refer to return of get_decision_function
+    @param SVC_dec : 1-d Array - refer to return of __get_decision_function
+    @param k_dec   : 1-d Array - refer to return of __get_decision_function
+    @param b_dec   : 1-d Array - refer to return of __get_decision_function
     """
     plt.figure()
     bins = np.linspace(np.ceil(np.amin(SVC_dec)) - 10, np.ceil(np.amax(SVC_dec)) + 10, 100)
@@ -397,13 +462,13 @@ def plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
     plt.legend(loc='upper right')
     plt.show()
 
-def plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
+def __plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
     """
     plots ROC Curve
-    @param X_train_scaled : 2-d Array  - refer to return of scale_X
-    @param X_test_scaled  : 2-d Array  - refer to return of scale_X
-    @param y_train        : 1-d Array  - refer to return of preprocess_data
-    @param y_test         : 1-d Array  - refer to return of preprocess_data
+    @param X_train_scaled : 2-d Array  - refer to return of __scale_X
+    @param X_test_scaled  : 2-d Array  - refer to return of __scale_X
+    @param y_train        : 1-d Array  - refer to return of __preprocess_data
+    @param y_test         : 1-d Array  - refer to return of __preprocess_data
     """
     lr_clf = LogisticRegression()
     lr_clf.fit(X_train_scaled, y_train)
@@ -422,38 +487,34 @@ def plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
     plt.ylabel('Recall')
     plt.show()
 
-def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comments
+def __perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comments
     """
-    performs pca to n_comp number of components and plots the 2-d result
-    @param X_train_raw : 2-d Array - refer to return of preprocess_data
-    @param X_test_raw  : 2-d Array - refer to return of preprocess_data
-    @param y           : 1-d Array - refer to return of preprocess_data
-    @param coef        : Int       - refer to return of define_classifier
-    @param n_comp      : Int       - number of principal components to keep
+    performs PCA and plots the 2-d result
+    @param SVC_dec    : 2-d Array - refer to return of __get_decision_function
+    @param X_test_raw : 2-d Array - refer to return of __preprocess_data
+    @param y_test     : 1-d Array - refer to return of __preprocess_data
+    @param coef       : Tuple     - refer to return of __define_classifier
+    @param three_d    : Bool      - refer to return of perform_ml
     """
-    pca = decomposition.PCA(n_components=1)  # 7 features
+    pca = decomposition.PCA(n_components=2)
     pca_X = np.zeros_like(X_test_raw)
     for i in range(len(pca_X)):
         pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
-    dec_pca = pca.fit_transform(pca_X).ravel()
+    dec_pca = pca.fit_transform(pca_X)
 
     plt.figure()
     for i in range(len(model_list)):
-        xs = SVC_dec[y_test == i]
-        ys = dec_pca[y_test == i]
+        xs = dec_pca[:, 0][y_test == i]
+        ys = SVC_dec[y_test == i]
         plt.scatter(xs, ys, c=color_list[i], label=model_list[i])
+    plt.xlabel("First Principal Component")
+    plt.ylabel("SVM Hyperplane Decision Function")
     plt.title('PCA 2D')
     plt.legend(loc='upper right')
     plt.show()
 
     # optional
     if three_d:
-        pca = decomposition.PCA(n_components=2)  # 7 features
-        pca_X = np.zeros_like(X_test_raw)
-        for i in range(len(pca_X)):
-            pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
-        dec_pca = pca.fit_transform(pca_X)
-
         fig = plt.figure(figsize=(10, 8))
         ax = fig.gca(projection='3d')
         plt.rcParams['legend.fontsize'] = 10
@@ -464,12 +525,12 @@ def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comme
             ax.scatter(xs, ys, zs, alpha=0.5, c=color_list[i], label=model_list[i])
         ax.set_xlabel('First Principal Component')
         ax.set_ylabel('Second Principal Component')
-        ax.set_zlabel('Hyperplane Decision Function')
+        ax.set_zlabel('SVM Hyperplane Decision Function')
         plt.title('PCA 3D')
         ax.legend(bbox_to_anchor=(0.35, 0.9))
         plt.show()
 
-########################### External Methods: Miscellaneous ###########################
+########################### Miscellaneous ###########################
 
 def set_parameters(default_val):
     """
@@ -486,62 +547,13 @@ def set_parameters(default_val):
     return return_val
 
 def display_init_params():
+    """
+    displays values of initial parameters
+    """
     print("\n****** Running with: ******")
-    for label, val in zip(param_list, (sample_size, n, mu, num_desc_thold)):
+    for label, val in zip(param_list, (sample_size, n, mu)):
         print("   ",label, ":", val)
     print()
-
-def populate_coalescent_list(kingman_coalescent_list, bs_coalescent_list):
-    """
-    fills each array with samples of both coalescent types
-    @param kingman_coalescent_list : 1-d Array - to be filled with samples
-    @param bs_coalescent_list      : 1-d Array - to be filled with samples
-    """
-    for i in range(sample_size):
-        kingman_coalescent_list[i] = Sample(i + 1)
-        bs_coalescent_list[i] = Sample(i + 1)
-
-def display_stats(data_k, data_b, model_list, stat_list):
-    """
-    displays the cumulative statistics of all trees observed for Kingman and Bolthausen-Sznitman
-    @param data_k     : 2-d Array - holds data extracted from Kingman trees
-    @param data_b     : 2-d Array - holds data extracted from Bolthausen-Sznitman trees
-    @param model_list : 1-d Array - provides the names of coalescent models
-    @param stat_list  : 1-d Array - provides description of each statistics examined
-    """
-    k_stats, b_stats = np.zeros((2, m)), np.zeros((2, m))
-    k_stats[0], b_stats[0] = np.mean(data_k, axis=1), np.mean(data_b, axis=1)
-    k_stats[1], b_stats[1] = np.std(data_k, axis=1), np.std(data_b, axis=1)
-    print("\n<<Tree Statistics>> with {:d} Trees Each with Standard Deviation".format(n))
-    for model_name, means, stds in zip(model_list, (k_stats[0], b_stats[0]), (k_stats[1], b_stats[1])):
-        for stat_label, mean, std in zip(stat_list, means, stds):
-            print(model_name, stat_label, ":", mean, ",", std)
-        print()
-    print("<<Kingman vs. Bolthausen-Sznitman>> Side-by-Side Comparison :")
-    for i in range(m):
-        print(stat_list[i], ":\n", k_stats[0][i], " vs.", b_stats[0][i],
-              "\n", k_stats[1][i], "    ", b_stats[1][i])
-    print()
-
-def plot_histogram_each_data(data_k, data_b, num_linspace=30):
-    """
-    plots histogram for each kind of data collected for each tree
-    @param data_k       : 2-d Array - holds kingman data
-    @param data_b       : 2-d Array - holds bolthausen data
-    @param num_linspace : Int       - defines how to space out the histogram bin
-    """
-    for i in range(m):
-        plt.figure()
-        stat_min, stat_max = np.amin(np.append(data_k[i], data_b[i])), np.amax(np.append(data_k[i], data_b[i]))
-        if np.absolute(stat_max-stat_min) >= 100: num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
-        bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
-        plt.hist(data_k[i], facecolor=color_list[0], bins=bins, lw=1, alpha=0.5, label='Kingman')
-        plt.hist(data_b[i], facecolor=color_list[1], bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
-        plt.title(stat_list[i])
-        plt.legend(loc='upper right')
-        plt.show()
-
-########################### Internal Methods: Miscellaneous ###########################
 
 def __request_user_input(vals, *args, multiple_choice=False):
     """
@@ -562,7 +574,10 @@ def __request_user_input(vals, *args, multiple_choice=False):
             _range += (arg1,)
         accepted_range = " in _range"
     while True:
-        value = input("Please write custom value for " + value_name + " (only " + data_type + " accepted): ")
+        specs = ''
+        if "thold" in value_name:
+            specs += " between 0.0 and 1.0"
+        value = input("Please write custom value for " + value_name + " (only " + data_type + specs + " accepted): ")
         try:
             value = float(value) if "float" in data_type else int(value)
             if eval(str(value) + accepted_range):
@@ -599,6 +614,47 @@ def __check_n():
                 print("Exiting..")
                 sys.exit(0)
 
+def __display_stats(data_k, data_b, model_list, stat_list):
+    """
+    displays the cumulative statistics of all trees observed for Kingman and Bolthausen-Sznitman
+    @param data_k     : 2-d Array - holds data extracted from Kingman trees
+    @param data_b     : 2-d Array - holds data extracted from Bolthausen-Sznitman trees
+    @param model_list : 1-d Array - provides the names of coalescent models
+    @param stat_list  : 1-d Array - provides description of each statistics examined
+    """
+    k_stats, b_stats = np.zeros((2, num_feature)), np.zeros((2, num_feature))
+    k_stats[0], b_stats[0] = np.mean(data_k, axis=1), np.mean(data_b, axis=1)
+    k_stats[1], b_stats[1] = np.std(data_k, axis=1), np.std(data_b, axis=1)
+    print("\n<<Tree Statistics>> with {:d} Trees Each with Standard Deviation".format(n))
+    for model_name, means, stds in zip(model_list, (k_stats[0], b_stats[0]), (k_stats[1], b_stats[1])):
+        for stat_label, mean, std in zip(stat_list, means, stds):
+            print(model_name, stat_label, ":", mean, ",", std)
+        print()
+    print("<<Kingman vs. Bolthausen-Sznitman>> Side-by-Side Comparison :")
+    for i in range(num_feature):
+        print(stat_list[i], ":\n", k_stats[0][i], " vs.", b_stats[0][i],
+              "\n", k_stats[1][i], "    ", b_stats[1][i])
+    print()
+
+def __plot_histogram_each_data(data_k, data_b):
+    """
+    plots histogram for each kind of data collected for each tree
+    @param data_k       : 2-d Array - holds kingman data
+    @param data_b       : 2-d Array - holds bolthausen data
+    """
+    for i in range(num_feature):
+        plt.figure()
+        num_linspace = 30
+        stat_min, stat_max = np.amin(np.append(data_k[i], data_b[i])), np.amax(np.append(data_k[i], data_b[i]))
+        if np.absolute(stat_max-stat_min) >= 100:
+            num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
+        bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
+        plt.hist(data_k[i], facecolor=color_list[0], bins=bins, lw=1, alpha=0.5, label='Kingman')
+        plt.hist(data_b[i], facecolor=color_list[1], bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
+        plt.title(stat_list[i])
+        plt.legend(loc='upper right')
+        plt.show()
+
 def __quicksort(children_list, first, last):
     """
     sorts the children_list based on the value of big_pivot
@@ -622,13 +678,17 @@ def __partition(children_list, first, last):
     lo, hi = first + 1, last
     piv = children_list[first].big_pivot
     while True:
-        while lo <= hi and children_list[lo].big_pivot <= piv:    lo += 1
-        while hi >= lo and children_list[hi].big_pivot >= piv:    hi -= 1
-        if hi < lo:     break
+        while lo <= hi and children_list[lo].big_pivot <= piv:
+            lo += 1
+        while hi >= lo and children_list[hi].big_pivot >= piv:
+            hi -= 1
+        if hi < lo:
+            break
         else:
             temp = children_list[lo]
             children_list[lo], children_list[hi] = children_list[hi], temp
-    if hi == first:     return hi
+    if hi == first:
+        return hi
     part = children_list[first]
     children_list[first], children_list[hi] = children_list[hi], part
     return hi
@@ -646,16 +706,15 @@ def __project_onto_plane(a, b):
 
 ########################### Optional : Display Tool ###########################
 
-def display_tree(ancestors):
+def __display_tree(ancestor):
     """
     displays the Newick Format in string Newick format and its Phylo visualization
-    @param ancestors : 1-d Array - root of the tree to be displayed
+    @param ancestor : Ancestor - root of the tree to be displayed
     """
-    for i in range(len(ancestors)):
-        newick = __traversal(ancestors[i])
-        tree = Phylo.read(StringIO(str(newick)), 'newick')
-        Phylo.draw(tree)
-        print(newick)
+    newick = __traversal(ancestor)
+    tree = Phylo.read(StringIO(str(newick)), 'newick')
+    Phylo.draw(tree)
+    print(newick)
 
 def __traversal(sample):
     """
@@ -692,3 +751,9 @@ def __recur_traversal(output, sample):
     output = __recur_traversal((output + ', '), current)
     output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
     return output
+
+################################################################################
+
+if __name__ == '__main__':
+    print("Not a main program, please run simulation.py")
+    sys.exit(0)
