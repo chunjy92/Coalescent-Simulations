@@ -2,32 +2,13 @@
 # ========================================= #
 # Coalescent Simulations APIs               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 06/29/2016                  #
+# last update : 09/03/2016                  #
 # ========================================= #
 
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-from Bio import Phylo
-from io import StringIO
 from scipy.stats import poisson
-from sklearn import preprocessing, metrics, decomposition
-from sklearn.svm import SVC
-from sklearn.cross_validation import train_test_split
-from sklearn.linear_model.logistic import LogisticRegression
 import matplotlib.pyplot as plt
 import sys
-
-########################### Global Variables ###########################
-
-# will be initialized as defined in main program
-model_list     = None
-color_list     = None
-stat_list      = None
-param_list     = None
-sample_size    = 0
-n              = 0
-mu             = 0
-num_feature    = 0
 
 ########################### Tree Node Objects ###########################
 
@@ -36,18 +17,19 @@ class Sample:  # Leaf of Tree
         """
         @param identity_count: Int - unique ID number to distinguish this sample from the rest
         """
-        self.identity = identity_count   # unique identity of each sample
-        self.big_pivot = identity_count  # Conforms to usual visualization
-        self.next = None                 # links to its left neighbor child of its parent
-        self.time = 0                    # time to the previous coalescent event
-        self.generation = 0              # each coalescent event represents a generation, beginning from the bottom of the tree
-        self.mutations = 0               # mutations that occurred from the previous coalescent event
+        self.identity = str(identity_count) # unique identity of each sample
+        self.big_pivot = identity_count     # used as key values in quicksort - conforms to usual visualization by placing nodes with bigger pivots
+                                            # to the right of the children_list and descendant_list
+        self.next = None                    # links to its left neighbor child of its parent
+        self.time = 0                       # time to the previous coalescent event
+        self.generation = 0                 # each coalescent event represents a generation, beginning from the bottom of the tree
+        self.mutations = 0                  # mutations that occurred from the previous coalescent event
 
     def __repr__(self):
         return 'Sample {} with Mutations {:d}.'.format(self.identity, self.mutations)
 
     def is_sample(self):
-        return True
+        return 'A' not in self.identity
 
 class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
     def __init__(self, identity_count):
@@ -66,38 +48,180 @@ class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
     def __repr__(self):
         return 'Ancestor {} with Mutations {:d}.'.format(self.identity, self.mutations)
 
-    def is_sample(self):
-        return False
-
 ########################### Main Simulation ###########################
 
-def simulation(newick=False, plot_data=False):
+def iterate(num_iter_each, sample_size_range, init_mu,
+            param_list, model_list, color_list, stat_list):
     """
-    simulates the Kingmand and Bolthausen coalescence
-    @param data   : Tuple - (kingman_data, bolthausen-sznitman_data) empty 2-d arrays to hold data extracted from each model trees
-    @param newick : Bool  - whether to display the tree in newick format or not
-    @return       : Tuple - (k_list, b_list : 2-d Array - holds data collected from kingman coalescence and bolthausen-sznitman coalescence)
+    iterate through every combination of sample size and mutation rates given
     """
-    k_list, b_list = np.zeros((n, num_feature)), np.zeros((n, num_feature))
-    for i in range(n):
+
+    accurate_threshold_bbl, refined_mu = np.zeros_like(sample_size_range, dtype=float), np.zeros_like(sample_size_range, dtype=float)
+    pass_percent = .9
+    for idx, sample_size in enumerate(sample_size_range):
+        mu = init_mu if init_mu < 15 else 200
+        while True:
+            __display_params(param_list, sample_size, mu)
+            threshold_bbl, percent_correct = simulation(sample_size, num_iter_each, mu,
+                                                        model_list, color_list, stat_list)
+            accurate_threshold_bbl[idx] = threshold_bbl
+            refined_mu[idx] = mu
+            if percent_correct >= pass_percent:
+                print("\n*******Either equal to or over {:.2f}, moving along\n".format(pass_percent))
+                break
+
+            mu = mu * (1 + pass_percent - percent_correct)
+            if mu >= 10000:
+                break
+
+    return accurate_threshold_bbl, refined_mu
+
+def simulation(sample_size, niter, mu,
+               model_list, color_list, stat_list,
+               newick=False, plot_data=False):
+    """
+    simulates the Kingman and Bolthausen-Sznitman coalescence
+    @return : refer to return of get_threshold
+    """
+    num_feature = len(stat_list)
+    k_list, b_list = np.zeros((niter, num_feature)), np.zeros((niter, num_feature))
+    for i in range(niter):
         # Populate the lists with samples
-        kingman_coalescent_list, bs_coalescent_list = __init_coalescent_list()
+        kingman_coalescent_list, bs_coalescent_list = __init_coalescent_list(sample_size)
 
         # Kingman Coalescence
-        __kingman_coalescence(kingman_coalescent_list, *(k_list, i), newick=newick)
+        __kingman_coalescence(sample_size, mu,
+                              kingman_coalescent_list,
+                              *(k_list, i), newick=newick)
 
         # Bolthausen-Sznitman Coalescence
-        __bs_coalescence(bs_coalescent_list, *(b_list, i), newick=newick)
+        __bs_coalescence(sample_size, mu,
+                         bs_coalescent_list,
+                         *(b_list, i), newick=newick)
 
-    data_k, data_b = np.transpose(k_list), np.transpose(b_list)
-    __display_stats(data_k, data_b, model_list, stat_list)
+    return get_threshold(k_list, b_list)
 
-    # Plot histogram of each data
-    if plot_data:
-        __plot_histogram_each_data(data_k, data_b)
-    return k_list, b_list
+def get_threshold(k_list, b_list):
+    """
+    get BBL threshold
+    @param k_list: Kingman data
+    @param b_list: Bolthausen-Sznitman data
+    @return      : threhold values, correct prediction percentage
+    """
+    total_list = np.concatenate([k_list, b_list])
+    total_size = len(total_list)
+    k_label, b_label = np.zeros_like(k_list), np.ones_like(b_list)
+    total_label = np.concatenate([k_label, b_label])
+    result = np.concatenate([total_list, total_label], axis=1)
+    sorted_result = result[np.argsort(result[:, 0])]
 
-def __init_coalescent_list():
+    threshold_bbl, threshold_idx = 0, 0
+    goodness, max_goodness = 0, 0
+    goodness_log = []
+    for index, res in enumerate(sorted_result):
+        i = res[1]
+        if i == 0:
+            goodness += 1
+        else:
+            goodness -= 1
+        goodness_log.append(goodness)
+        if goodness > max_goodness:
+            max_goodness = goodness
+            threshold_idx = index
+            try:
+                threshold_bbl = (res[0] + sorted_result[index+1, 0]) / 2
+            except IndexError:
+                threshold_bbl = res[0]
+
+    pred_label = np.concatenate([np.zeros(threshold_idx+1), np.ones(total_size - (threshold_idx+1))])
+    sum_correct = np.sum(pred_label == sorted_result[:, 1])
+    percent_correct = sum_correct / total_size
+    return threshold_bbl, percent_correct
+
+def goodness_vs_threshold(goodness, bbl):
+    """
+    plots the goodness vs. Bottom Branch Length Threshold
+    @param goodness : 1-d Array - accumulation of correct predictions
+    @param bbl      : 1-d Array - BBL Threshold
+    """
+    plt.figure()
+    plt.plot(bbl, goodness, label='over time')
+    plt.xlim([-1, 10])
+    plt.title("Goodness vs BBL Threshold")
+    plt.show()
+
+def plot_accurate_thold(sample_size_range, accurate_threshold_bbl, refined_mu,
+                        param_list, model_list, color_list, stat_list):
+    """
+    plots various log-scaled versions of sample_size vs mu
+    """
+    for i in range(4):
+        plt.figure()
+        plt.scatter(sample_size_range, refined_mu, alpha=0.5, label="BBL")
+        if i == 1:
+            plt.xscale('log')
+            plt.xlabel('LOG')
+        elif i == 2:
+            plt.yscale('log')
+            plt.ylabel('LOG')
+        elif i == 3:
+            plt.xscale('log')
+            plt.xlabel('LOG')
+            plt.yscale('log')
+            plt.ylabel('LOG')
+        plt.show()
+
+def plot_data(result_list, percent_list, sample_size_range, mutation_rate_range,
+              model_list, color_list):
+
+    # Result List
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.gca(projection='3d')
+    plt.rcParams['legend.fontsize'] = 10
+
+    #for index in range(len(model_list)):
+    for i in range(len(sample_size_range)):
+        for j in range(len(mutation_rate_range)):
+            xs = sample_size_range[i]
+            ys = mutation_rate_range[j]
+            zs = result_list[i][j]
+            ax.scatter(xs, ys, zs, alpha=0.5,label="BBL" if i == 0 and j == 0 else "")
+
+
+    ax.set_xlabel('Sample Size')
+    ax.set_ylabel('Mutation Rate')
+    ax.set_zlabel('Bottom Branch Length Threshold Value')
+    plt.title('BBL Scatter Plot')
+    ax.legend(bbox_to_anchor=(0.35, 0.9))
+    plt.show()
+
+    # Percent_ilst
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.gca(projection='3d')
+    plt.rcParams['legend.fontsize'] = 10
+
+    # for index in range(len(model_list)):
+    for i in range(len(sample_size_range)):
+        for j in range(len(mutation_rate_range)):
+            xs = sample_size_range[i]
+            ys = mutation_rate_range[j]
+            zs = percent_list[i][j]
+            ax.scatter(xs, ys, zs, alpha=0.5, label="BBL" if i == 0 and j == 0 else "")
+
+    ax.set_xlabel('Sample Size')
+    ax.set_ylabel('Mutation Rate')
+    ax.set_zlabel('Percent Correct')
+    plt.title('Percent Correct Scatter Plot')
+    ax.legend(bbox_to_anchor=(0.35, 0.9))
+    plt.show()
+
+def all_ancestors(items):
+    """
+    checks whether all items are of Ancestor type
+    """
+    return all(isinstance(x, Ancestors) for x in items)
+
+def __init_coalescent_list(sample_size):
     """
     initializes coalescent lists for Kingman and Bolthausen-Sznitman simulation
     @return: Tuple - ( 1-d Array - Kingman coalescent_list
@@ -105,44 +229,21 @@ def __init_coalescent_list():
     """
     return np.array([Sample(i+1) for i in range(sample_size)]), np.array([Sample(i+1) for i in range(sample_size)])
 
-def __k_F(n):
-    """
-    computes the Kingman function
-    @param n : Int   - current size of the coalescent list, i.e. number of samples available for coalescence
-    @return  : Float - Kingman function result
-    """
-    return n*(n-1) / 2
-
-def __b_F(mn_rate, n):  # more detailed description needed
-    """
-    computes the Bolthausen-Sznitman function
-    @param mn_rate : 1-d Array -
-    @param n       : Int       - current size of the coalescent list, i.e. number of samples available for coalescence
-    @return        : Tuple     - ( mn_rate    : 1-d Array -
-                                   total_rate : 1-d Array - holds each i rate )
-    """
-    total_rate = 0
-    for i in range(n-1):
-        m = i + 2
-        i_rate = n / (m * (m-1))
-        mn_rate[i] = i_rate
-        total_rate += i_rate
-    return mn_rate, total_rate
-
-def __kingman_coalescence(coalescent_list, *data, newick=False):
+def __kingman_coalescence(sample_size, mu, coalescent_list,
+                          *data, newick=False):
     """
     models the Kingman coalescence
     @param coalescent_list     : 1-d Array - holds samples
     @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
     @param newick              : Bool      - refer to argument of simulation
     """
-    gen_time = np.zeros(sample_size - 1)  # coalescent time for each generation
+    gen_time = np.zeros(sample_size-1)  # coalescent time for each generation
     nth_coalescence = 0  # Starting from 0
 
     # Until reaching the Most Recent Common Ancestor
     while np.size(coalescent_list) > 1:
         # Time Calculation
-        time = np.random.exponential(1 / __k_F(np.size(coalescent_list)))
+        time = np.random.exponential(1/__k_F(np.size(coalescent_list)))
         gen_time[nth_coalescence] = time
         nth_coalescence += 1
 
@@ -152,18 +253,19 @@ def __kingman_coalescence(coalescent_list, *data, newick=False):
 
         # update the tree using mutations as branch length, recording data along the way
         lists = {'coalescent_list': coalescent_list, 'children_list': children_list, 'gen_time': gen_time}
-        coalescent_list = __update_children(ancestor, *data, **lists)
-    if newick:
-        mrca = coalescent_list[0]
-        mrca.identity = mrca.identity.replace('A', 'K')
-        __display_tree(mrca)
+        coalescent_list = __update_children(mu, ancestor, *data, **lists)
+        if all_ancestors(coalescent_list):
+            break
 
-def __bs_coalescence(coalescent_list, *data, newick=False):
+def __bs_coalescence(sample_size, mu, coalescent_list,
+                     *data, newick=False):
     """
     models the Bolthausen-Sznitman coalescence
-    @param coalescent_list     : 1-d Array - holds samples
-    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
-    @param newick              : Bool      - refer to argument of simulation
+    @param sample_size     : Int       - refer to argument of simulation
+    @param mu              : Float     - refer to argument of simulation
+    @param coalescent_list : 1-d Array - holds samples
+    @param data            : Tuple     - (data_list, data_index) -> refer to __update_data
+    @param newick          : Bool      - refer to argument of simulation
     """
     gen_time = np.zeros(sample_size - 1)  # coalescent time for each generation
     nth_coalescence = 0  # Starting from 0
@@ -188,19 +290,43 @@ def __bs_coalescence(coalescent_list, *data, newick=False):
 
         # update the tree using mutations as branch length, recording data along the way
         lists = {'coalescent_list': coalescent_list, 'children_list': children_list, 'gen_time': gen_time}
-        coalescent_list = __update_children(ancestor, *data, **lists)
-    if newick:
-        mrca = coalescent_list[0]
-        mrca.identity = mrca.identity.replace('A', 'B')
-        __display_tree(mrca)
 
-def __update_children(ancestor, data_list, data_index, coalescent_list, children_list, gen_time):
+        coalescent_list = __update_children(mu, ancestor, *data, **lists)
+        if all_ancestors(coalescent_list):
+            break
+
+def __k_F(n):
+    """
+    computes the Kingman function
+    @param n : Int   - current size of the coalescent list, i.e. number of samples available for coalescence
+    @return  : Float - Kingman function result
+    """
+    return n*(n-1) / 2
+
+def __b_F(mn_rate, n):
+    """
+    computes the Bolthausen-Sznitman function
+    @param mn_rate : 1-d Array -
+    @param n       : Int       - current size of the coalescent list, i.e. number of samples available for coalescence
+    @return        : Tuple     - ( mn_rate    : 1-d Array -
+                                   total_rate : 1-d Array - holds each i rate )
+    """
+    total_rate = 0
+    for i in range(n-1):
+        m = i + 2
+        i_rate = n / (m * (m-1))
+        mn_rate[i] = i_rate
+        total_rate += i_rate
+    return mn_rate, total_rate
+
+def __update_children(mu, ancestor, data_list, data_index, coalescent_list, children_list, gen_time):
     """
     A.for each child node under the ancestor, do:
         1) calculate its time, taking into account the generation difference between the sample and its ancestor
-        2) based on 1), calculate its mutation
+        2) based on 1), calculate the branch's mutation value
         3) perform appropriate tasks depending on what type the child is -> refer to comments below for details
     B. update the ancestor
+    @param mu               : Float     - refer to argument of simulation
     @param ancestor         : Ancestor  - newly merged ancestor
     @param data_list        : 2-d Array - to be updated
     @param data_index       : Int       - ensures each data is stored at right place
@@ -210,22 +336,19 @@ def __update_children(ancestor, data_list, data_index, coalescent_list, children
     @return coalescent_list : 1-d Array - updated coalescent list
     """
     temp_list = np.copy(children_list)
-
-    # children_index: index of changing children_list
-    children_index = 0
+    children_index = 0  # index of changing children_list
 
     ##########################################################################################
-    ### BEGIN: iteration through the children_list
+    # BEGIN: iteration through the children_list
     while children_index < np.size(temp_list):
-        # current child under inspection
-        current = temp_list[children_index]
+        current = temp_list[children_index]  # current child under inspection
 
         __update_time(current, ancestor, gen_time)
         current.mutations = poisson.rvs(mu * current.time)
 
-        # First Case : a Sample(Leaf)
+        # First Case : a Sample (Leaf Node)
         if current.is_sample():
-            __update_data(data_list, data_index, *zip((0, 1), (current.mutations, current.mutations)))
+            __update_data(data_list, data_index, *zip((0,), (current.mutations,)))
 
         # Second Case : an Internal Node with Mutations == 0
         elif not (current.is_sample()) and current.mutations == 0:
@@ -241,11 +364,11 @@ def __update_children(ancestor, data_list, data_index, coalescent_list, children
             if children_index > 0:
                 temp_list[children_index].next = temp_list[children_index-1]
             # Increase the index appropriately by jumping over the current child's children
-            children_index += (np.size(current.children_list) - 1)
+            children_index += (np.size(current.children_list)-1)
 
         # Third Case : an Internal Node with Mutations > 0
-        else:
-            __update_data(data_list, data_index, *zip((0,), (current.mutations,)))
+        #else:
+        #    __update_data(data_list, data_index, *zip((0,), (current.mutations,)))
 
         # Delete Current Child from the Coalescent List (unless Deleted alrdy in the Second Case)
         cond = coalescent_list == temp_list[children_index]
@@ -258,11 +381,12 @@ def __update_children(ancestor, data_list, data_index, coalescent_list, children
 
         # increase indices
         children_index += 1
-    ### END: iteration through the children_list
+    # END: iteration through the children_list
     ##########################################################################################
 
     # Update new information to the ancestor
     __update_ancestor(ancestor, temp_list)
+
     return coalescent_list
 
 def __coalesce_children(coalescent_list, identity_count, num_children=2):
@@ -270,7 +394,7 @@ def __coalesce_children(coalescent_list, identity_count, num_children=2):
     Given a number of children to be merged, perform a coalescent event that creates a merged ancestor
     @param coalescent_list : 1-d Array - holds samples currently available for new coalescence
     @param identity_count  : Int       - distinct ID number to create a new merged sample
-    @param num_children    : Int       - number of children to be coalesced
+    @param num_children    : Int       - number of children to be coalesced, 2 by default
     @return                : Tuple     - ( coalescent_list : 1-d Array - updated coalescent list
                                            merge_sample    : Ancestor  - new merged sample
                                            children_list   : 1-d Array - Ancestor's direct children )
@@ -295,13 +419,14 @@ def __update_descendent_list(children_list):
     while i < np.size(descendent_list):
         if not(descendent_list[i].is_sample()):
             # insert the internal node's own descendent list at the node's index in the current descendent_list
-            # -> since the node below the sample, its descdent list has already been updated
+            # -> since the node is below the sample, its descdent list must have already been updated
             size = np.size(descendent_list[i].descendent_list)
             descendent_list = np.insert(descendent_list, i, descendent_list[i].descendent_list)
+
             # remove the given internal node from the descendent list -> we only want the samples, not the internal nodes
             descendent_list = np.delete(descendent_list, i+size)
             i += size
-        else:  # if sample
+        else:       # if sample,
             i += 1  # move to the next on the descendent list
     return descendent_list
 
@@ -312,7 +437,7 @@ def __update_time(sample, ancestor, gen_time):
     @param ancestor : Ancestor          - newly merged ancestor
     @param gen_time : 1-d Array         - holds coalescent time between generations
     """
-    for j in range(ancestor.generation - 1, sample.generation - 1, -1):
+    for j in range(ancestor.generation-1, sample.generation-1, -1):
         sample.time += gen_time[j]
 
 def __update_ancestor(ancestor, children_list):
@@ -323,7 +448,7 @@ def __update_ancestor(ancestor, children_list):
     """
     ancestor.children_list = children_list
     ancestor.descendent_list = __update_descendent_list(children_list)
-    ancestor.right = children_list[np.size(children_list) - 1]
+    ancestor.right = children_list[np.size(children_list)-1]
     ancestor.big_pivot = ancestor.right.big_pivot
     ancestor.left = ancestor.children_list[0]
 
@@ -337,335 +462,29 @@ def __update_data(data_list, data_index, *data):
     for index, value in data:
         data_list[data_index][index] += value
 
-########################### Machine Learning Statistics and Plots ###########################
-
-def perform_ml(k_list, b_list, test_size=0.25, classifier_kernel='linear', pca_three_d=False):
-    """
-    performs machine learning on data collected from simulation using scikit-learn library
-    @param k_list            : 2-d Array - refer to return of simulation
-    @param b_list            : 2-d Array - refer to return of simulation
-    @param test_size         : Int       - defines how the data is to be randomly split
-    @param classifier_kernel : String    - defines the kernel type of the classifier
-    @param pca_three_d       : Bool      - defines whether to print 3-d version of PCA
-    """
-    # Preprocessing data by splitting accordingly and scaling it
-    X, y, X_train_raw, X_test_raw, y_train, y_test = __preprocess_data(k_list, b_list, test_size=test_size)
-    X_train_scaled, X_test_scaled = __scale_X(X_train_raw, X_test_raw, y_train)
-
-    # Define Classifier, train it and get its properties
-    SVC_clf, coef, intercept = __define_classifier(X_train_scaled, y_train, kernel=classifier_kernel)
-
-    # Get distances of each vector from the separating hyperplane
-    SVC_dec, k_dec, b_dec = __get_decision_function(SVC_clf, X_test_scaled, y_test)
-
-    # Accuracy Test
-    __test_accuracy(SVC_clf, X_train_scaled, y_train, X_test_scaled, y_test)
-
-    # Histogram
-    __plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec)
-
-    # ROC Curve
-    __plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test)
-
-    # PCA
-    __perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=pca_three_d)
-
-def __preprocess_data(k_list, b_list, test_size):
-    """
-    collects data into a form usable through scikit-learn stat analysis tools
-    @param k_list    : 2-d Array - refer to return of simulation
-    @param b_list    : 2-d Array - refer to return of simulation
-    @param test_size : Int       - refer to argument of perform_ml
-    @return          : Tuple     - (raw data collection X, raw prediction label collection y, X to be trained,
-                                    X to be tested, label for train data, label for test data)
-    """
-    k_label, b_label = np.zeros(n), np.ones(n)  # predicted variables, where 0: Kingman, 1 : Bolthausen-Sznitman
-    X, y = np.append(k_list, b_list, axis=0), np.append(k_label, b_label, axis=0) # raw collection of data and labels that match
-    X_train_raw, X_test_raw, y_train, y_test = train_test_split(X, y, test_size=test_size)
-    return X, y, X_train_raw, X_test_raw, y_train, y_test
-
-def __scale_X(X_train_raw, X_test_raw, y_train):
-    """
-    define a scaler and scale each X
-    @param X_train_raw : 2-d Array - refer to return of __preprocess_data
-    @param X_test_raw  : 2-d Array - refer to return of __preprocess_data
-    @param y_train     : 1-d Array - refer to return of __preprocess_data
-    @return            : Tuple     - ( X_train_scaled : 2-d Array - scaled X train data
-                                       X_test_scaled  : 2-d Array - scaled X test data )
-    """
-    scaler = preprocessing.StandardScaler().fit(X_train_raw, y_train)
-    X_train_scaled = scaler.transform(X_train_raw)
-    X_test_scaled  = scaler.transform(X_test_raw)
-    return X_train_scaled, X_test_scaled
-
-def __define_classifier(X_train_scaled, y_train, kernel='linear'):
-    """
-    defines a classifier, fits to train data and get its properties
-    @param X_train_scaled : 2-d Array - refer to return of __preprocess_data
-    @param y_train        : 1-d Array - refer to return of __preprocess_data
-    @param kernel         : String    - refer to simulation
-    @return               : Tuple     - ( SVC_clf   : Classifier - support vector classifier
-                                          coef      : Tuple      - linear coefficients of the separating hyperplane
-                                          intercept : Int        - intercept of the hyperplane )
-    """
-    SVC_clf = SVC(kernel=kernel)
-    SVC_clf.fit(X_train_scaled, y_train)
-    coef, intercept = SVC_clf.coef_[0], SVC_clf.intercept_[0]
-    print("Coefficients:", coef)
-    print("Intercept:", intercept)
-    return SVC_clf, coef, intercept
-
-def __get_decision_function(clf, X_test_scaled, y_test):
-    """
-    returns the decision functions
-    @param clf           : Classifier - refer to return of __define_classifier
-    @param X_test_scaled : 2-d Array  - refer to return of __scale_X
-    @param y_test        : 1-d Array  - refer to return of __preprocess_data
-    @return              : Tuple      - ( SVC_dec : 1-d Array - entire decision function
-                                          k_dec   : 1-d Array - Kingman decision function
-                                          b_dec   : 1-d Array - Bolthausen-Sznitman decision function )
-    """
-    SVC_dec      = clf.decision_function(X_test_scaled)
-    k_dec, b_dec = SVC_dec[y_test == 0], SVC_dec[y_test == 1]
-    print(model_list[0], "Decision Function Mean:", np.mean(k_dec))
-    print(model_list[1], "Decision Function Mean:", np.mean(b_dec))
-    return SVC_dec, k_dec, b_dec
-
-def __test_accuracy(clf, X_train_scaled, y_train, X_test_scaled, y_test):
-    """
-    tests the accuracy of the classifier, using the test data
-    @param clf            : Classifier - refer to return of __define_classifier
-    @param X_train_scaled : 2-d Array  - refer to return of __scale_X
-    @param y_train        : 1-d Array  - refer to return of __preprocess_data
-    @param X_test_scaled  : 2-d Array  - refer to return of __scale_X
-    @param y_test         : 1-d Array  - refer to return of __preprocess_data
-    """
-    y_train_pred = clf.predict(X_train_scaled)
-    print("Train Set Accuracy :", metrics.accuracy_score(y_train, y_train_pred))
-    y_pred = clf.predict(X_test_scaled)
-    print("Test Set Accuracy  :", metrics.accuracy_score(y_test, y_pred))
-
-def __plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
-    """
-    plots histogram for the decision function produced by SVC
-    @param SVC_dec : 1-d Array - refer to return of __get_decision_function
-    @param k_dec   : 1-d Array - refer to return of __get_decision_function
-    @param b_dec   : 1-d Array - refer to return of __get_decision_function
-    """
-    plt.figure()
-    bins = np.linspace(np.ceil(np.amin(SVC_dec)) - 10, np.ceil(np.amax(SVC_dec)) + 10, 100)
-    plt.hist(k_dec, bins, facecolor=color_list[0], alpha=0.5, label='Kingman')
-    plt.hist(b_dec, bins, facecolor=color_list[1], alpha=0.5, label='Bolthausen-Sznitman')
-    plt.title('Frequency of Decision Function Values: {:d} Executions'.format(n))
-    plt.xlabel('Decision Function Value')
-    plt.ylabel('Frequencies')
-    plt.legend(loc='upper right')
-    plt.show()
-
-def __plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
-    """
-    plots ROC Curve
-    @param X_train_scaled : 2-d Array  - refer to return of __scale_X
-    @param X_test_scaled  : 2-d Array  - refer to return of __scale_X
-    @param y_train        : 1-d Array  - refer to return of __preprocess_data
-    @param y_test         : 1-d Array  - refer to return of __preprocess_data
-    """
-    lr_clf = LogisticRegression()
-    lr_clf.fit(X_train_scaled, y_train)
-    pred_ROC = lr_clf.predict_proba(X_test_scaled)
-    false_positive_rate, recall, thresholds = metrics.roc_curve(y_test, pred_ROC[:, 1])
-    roc_auc = metrics.auc(false_positive_rate, recall)
-
-    plt.figure()
-    plt.title('Receiver Operating Chraracteristic (ROC) Curve')
-    plt.plot(false_positive_rate, recall, 'b', label='AUC = {:.2f}'.format(roc_auc))
-    plt.legend(loc='lower right')
-    plt.plot([0, 1], [0, 1], 'r--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.0])
-    plt.xlabel('Fall-Out')
-    plt.ylabel('Recall')
-    plt.show()
-
-def __perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comments
-    """
-    performs PCA and plots the 2-d result
-    @param SVC_dec    : 2-d Array - refer to return of __get_decision_function
-    @param X_test_raw : 2-d Array - refer to return of __preprocess_data
-    @param y_test     : 1-d Array - refer to return of __preprocess_data
-    @param coef       : Tuple     - refer to return of __define_classifier
-    @param three_d    : Bool      - refer to return of perform_ml
-    """
-    pca = decomposition.PCA(n_components=2)
-    pca_X = np.zeros_like(X_test_raw)
-    for i in range(len(pca_X)):
-        pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
-    dec_pca = pca.fit_transform(pca_X)
-
-    plt.figure()
-    for i in range(len(model_list)):
-        xs = dec_pca[:, 0][y_test == i]
-        ys = SVC_dec[y_test == i]
-        plt.scatter(xs, ys, c=color_list[i], label=model_list[i])
-    plt.xlabel("First Principal Component")
-    plt.ylabel("SVM Hyperplane Decision Function")
-    plt.title('PCA 2D')
-    plt.legend(loc='upper right')
-    plt.show()
-
-    # optional
-    if three_d:
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.gca(projection='3d')
-        plt.rcParams['legend.fontsize'] = 10
-        for i in range(len(model_list)):
-            xs = dec_pca[:, 0][y_test == i]
-            ys = dec_pca[:, 1][y_test == i]
-            zs = SVC_dec[y_test == i]
-            ax.scatter(xs, ys, zs, alpha=0.5, c=color_list[i], label=model_list[i])
-        ax.set_xlabel('First Principal Component')
-        ax.set_ylabel('Second Principal Component')
-        ax.set_zlabel('SVM Hyperplane Decision Function')
-        plt.title('PCA 3D')
-        ax.legend(bbox_to_anchor=(0.35, 0.9))
-        plt.show()
-
-########################### Miscellaneous ###########################
-
-def set_parameters(default_val):
-    """
-    sets the custom values of parameters by receiving user inputs, if instructed to do so
-    @param default_val : Tuple - default initial parameter values
-    @return            : List  - returns (possibly changed) parameter values
-    """
-    direction = str(input("Run with default values? \"custom\" for custom parameters values : "))
-    return_val = list(default_val)
-    if "custom" in direction or "no" in direction:
-        for i, vals in enumerate(zip(param_list, default_val)):
-            exec("return_val[i] = __request_user_input(vals)")
-    if n > 1000: __check_n()  # warning : n might have been set unnecessarily big for a test-case
-    return return_val
-
-def display_init_params():
+def __display_params(param_list, sample_size, mu):
     """
     displays values of initial parameters
+    @param param_list  : 1-d Array - list of parameters
+    @param sample_size : Int       - refer to argument of simulation
+    @param mu          : Float     - refer to argument of simulation
     """
     print("\n****** Running with: ******")
-    for label, val in zip(param_list, (sample_size, n, mu)):
+    for label, val in zip(param_list, (sample_size, mu)):
         print("   ",label, ":", val)
     print()
-
-def __request_user_input(vals, *args, multiple_choice=False):
-    """
-    handles user input
-    @param vals            : List        - holds data name and default data value
-    @param args            : Tuple       - pre-defined options for multiple choice
-    @param multiple_choice : Bool        - lists options if True
-    @return value          : Int / Float - result that matches user input
-    """
-    accepted_range = " >= 0"
-    value_name, data_type = vals[0], str(type(vals[1])).split("\'")[1]
-    if multiple_choice:
-        print("Available options:")
-        _range = ()
-        diction = dict(args)
-        for arg1, arg2 in args:
-            print(arg1, ":", arg2)
-            _range += (arg1,)
-        accepted_range = " in _range"
-    while True:
-        specs = ''
-        if "thold" in value_name:
-            specs += " between 0.0 and 1.0"
-        value = input("Please write custom value for " + value_name + " (only " + data_type + specs + " accepted): ")
-        try:
-            value = float(value) if "float" in data_type else int(value)
-            if eval(str(value) + accepted_range):
-                if multiple_choice:  value = diction[value]
-                break
-            else:
-                print("Value outside of the Accepted Range")
-        except ValueError:
-            print("Wrong Input, please write", data_type,"for", value_name)
-    print("Your input for", value_name, ":", value)
-    return value
-
-def __check_n():
-    """
-    confirms whether the user really desires the current n value
-    """
-    ans = str(input("Are you sure? Type \"yes\" if so: "))
-    if ans == "yes":
-        pass
-    elif ans == "no":
-        print("Exiting..")
-        sys.exit(0)
-    else:
-        counter = 0
-        while True:
-            ans = str(input("Are you sure? Type \"yes\" if so: "))
-            if ans == "yes":
-                break
-            elif ans == "no":
-                print("Exiting..")
-                sys.exit(0)
-            counter += 1
-            if counter >= 1:
-                print("Exiting..")
-                sys.exit(0)
-
-def __display_stats(data_k, data_b, model_list, stat_list):
-    """
-    displays the cumulative statistics of all trees observed for Kingman and Bolthausen-Sznitman
-    @param data_k     : 2-d Array - holds data extracted from Kingman trees
-    @param data_b     : 2-d Array - holds data extracted from Bolthausen-Sznitman trees
-    @param model_list : 1-d Array - provides the names of coalescent models
-    @param stat_list  : 1-d Array - provides description of each statistics examined
-    """
-    k_stats, b_stats = np.zeros((2, num_feature)), np.zeros((2, num_feature))
-    k_stats[0], b_stats[0] = np.mean(data_k, axis=1), np.mean(data_b, axis=1)
-    k_stats[1], b_stats[1] = np.std(data_k, axis=1), np.std(data_b, axis=1)
-    print("\n<<Tree Statistics>> with {:d} Trees Each with Standard Deviation".format(n))
-    for model_name, means, stds in zip(model_list, (k_stats[0], b_stats[0]), (k_stats[1], b_stats[1])):
-        for stat_label, mean, std in zip(stat_list, means, stds):
-            print(model_name, stat_label, ":", mean, ",", std)
-        print()
-    print("<<Kingman vs. Bolthausen-Sznitman>> Side-by-Side Comparison :")
-    for i in range(num_feature):
-        print(stat_list[i], ":\n", k_stats[0][i], " vs.", b_stats[0][i],
-              "\n", k_stats[1][i], "    ", b_stats[1][i])
-    print()
-
-def __plot_histogram_each_data(data_k, data_b):
-    """
-    plots histogram for each kind of data collected for each tree
-    @param data_k       : 2-d Array - holds kingman data
-    @param data_b       : 2-d Array - holds bolthausen data
-    """
-    for i in range(num_feature):
-        plt.figure()
-        num_linspace = 30
-        stat_min, stat_max = np.amin(np.append(data_k[i], data_b[i])), np.amax(np.append(data_k[i], data_b[i]))
-        if np.absolute(stat_max-stat_min) >= 100:
-            num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
-        bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
-        plt.hist(data_k[i], facecolor=color_list[0], bins=bins, lw=1, alpha=0.5, label='Kingman')
-        plt.hist(data_b[i], facecolor=color_list[1], bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
-        plt.title(stat_list[i])
-        plt.legend(loc='upper right')
-        plt.show()
 
 def __quicksort(children_list, first, last):
     """
     sorts the children_list based on the value of big_pivot
     @param children_list : 1-d Array - target to be sorted
     @param first         : Int       - index of first element
-    @param               : Int       - index of last element
+    @param last          : Int       - index of last element
     """
     if first < last:
         splitpoint = __partition(children_list, first, last)
-        __quicksort(children_list, first, splitpoint - 1)
-        __quicksort(children_list, splitpoint + 1, last)
+        __quicksort(children_list, first, splitpoint-1)
+        __quicksort(children_list, splitpoint+1, last)
 
 def __partition(children_list, first, last):
     """
@@ -693,64 +512,23 @@ def __partition(children_list, first, last):
     children_list[first], children_list[hi] = children_list[hi], part
     return hi
 
-def __project_onto_plane(a, b):
+def __plot_histogram_each_data(data_k, data_b):
     """
-    finds the vector projection of points onto the hyperplane
-    @param a : Tuple - coefficients of the hyperplane
-    @param b : Tuple - original vector
-    @return  : Tuple - new vector projected onto the hyperplane
+    plots histogram for each kind of data collected for each tree
+    @param data_k : 2-d Array - holds kingman data
+    @param data_b : 2-d Array - holds bolthausen data
     """
-    dot = np.dot(a, b) / np.linalg.norm(a)
-    p = dot * a / np.linalg.norm(a)
-    return b - p
-
-########################### Optional : Display Tool ###########################
-
-def __display_tree(ancestor):
-    """
-    displays the Newick Format in string Newick format and its Phylo visualization
-    @param ancestor : Ancestor - root of the tree to be displayed
-    """
-    newick = __traversal(ancestor)
-    tree = Phylo.read(StringIO(str(newick)), 'newick')
-    Phylo.draw(tree)
-    print(newick)
-
-def __traversal(sample):
-    """
-    iterates through the tree rooted at the sample recursively in pre-order, building up a Newick format
-    @param sample  : Ancestor - root of the tree to be displayed
-    @return output : String   - complete newick format
-    """
-    output = ''
-    current = sample.right
-    output = __recur_traversal((output + '('), current)
-    while current.next != sample.left:
-        current = current.next
-        output = __recur_traversal(output + ', ', current)
-    current = sample.left
-    output = __recur_traversal(output + ', ', current) + ')' + str(sample.identity)
-    return output
-
-def __recur_traversal(output, sample):
-    """
-    appends the sample's information to the current Newick format, recursively travelling to the sample's leaves as necessary
-    @param output  : String            - incoming newick format to be appended new information
-    @param sample  : Ancestor / Sample - provides new information
-    @return output : String            - modified newick format
-    """
-    if sample.is_sample():
-        output = output + str(sample.identity) + ':' + str(sample.mutations)
-        return output
-    current = sample.right
-    output = __recur_traversal((output + '('), current)
-    while current.next != sample.left:
-        current = current.next
-        output = __recur_traversal(output + ', ', current)
-    current = sample.left
-    output = __recur_traversal((output + ', '), current)
-    output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
-    return output
+    plt.figure()
+    num_linspace = 30
+    stat_min, stat_max = np.amin(np.append(data_k, data_b)), np.amax(np.append(data_k, data_b))
+    if np.absolute(stat_max-stat_min) >= 100:
+        num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
+    bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
+    plt.hist(data_k, facecolor='magenta', bins=bins, lw=1, alpha=0.5, label='Kingman')
+    plt.hist(data_b, facecolor='cyan', bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
+    plt.title('BBL')
+    plt.legend(loc='upper right')
+    plt.show()
 
 ################################################################################
 
