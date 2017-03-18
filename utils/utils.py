@@ -1,51 +1,50 @@
 # -*- coding: utf-8 -*-                     #
 # ========================================= #
-# Coalescent Simulations APIs               #
+# Coalescent Simulations Main Helper        #
 # author      : Che Yeol (Jayeol) Chun      #
 # last update : 03/17/2017                  #
 # ========================================= #
 
+import sys
 import numpy as np
 from scipy.stats import poisson
-import matplotlib.pyplot as plt
 
-########################### Tree Node Objects ###########################
 
-class Sample:  # Leaf of Tree
-    def __init__(self, identity_count):
-        """
-        @param identity_count: Int - unique ID number to distinguish this sample from the rest
-        """
-        self.identity = str(identity_count) # unique identity of each sample
-        self.big_pivot = identity_count     # used as key values in quicksort - conforms to usual visualization by placing nodes with bigger pivots
-                                            # to the right of the children_list and descendant_list
-        self.next = None                    # links to its left neighbor child of its parent
-        self.time = 0                       # time to the previous coalescent event
-        self.generation = 0                 # each coalescent event represents a generation, beginning from the bottom of the tree
-        self.mutations = 0                  # mutations that occurred from the previous coalescent event
+def select_mode():
+    '''
+    # when -M or --m specified at command line
+    allows user to select a single model
+    :return:
+    '''
+    print("\n*** Option to Specify Coalescent Model:")
+    usr = num_trials = 0
+    while usr == 0:
+        usr = input("Select 1 for Kingman, 2 for Bolthausen-Sznitman:\n")
+        try:
+            usr = int(usr)
+            if usr == 1:
+                mode = "K"
+                print("\n*** Kingman Coalescent Selected")
+                break
+            elif usr == 2:
+                mode = "B"
+                print("\n*** Bolthausen-Sznitman Coalescent Selected")
+                break
+            usr = 0
+        except ValueError:
+            pass
+        num_trials += 1
+        if num_trials >= 5:
+            print("\n*** Fatal: Exceeded Max number of attempts\n*** System Exiting...")
+            sys.exit(1)
+    return mode
 
-    def __repr__(self):
-        return 'Sample {} with Mutations {:d}.'.format(self.identity, self.mutations)
+def display_init_params():
+    print("\n****** Running with: ******")
+    for label, val in zip(param_list, (sample_size, n, mu, num_desc_thold)):
+        print("   ",label, ":", val)
+    print()
 
-    def is_sample(self):
-        return 'A' not in self.identity
-
-class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
-    def __init__(self, identity_count):
-        """
-        @param identity_count: Int - unique ID number to distinguish this ancestor from the rest
-        """
-        super(self.__class__, self).__init__(identity_count)
-        self.identity = 'A{}'.format(identity_count)
-        self.generation = identity_count
-        self.height = 0
-        self.left = None                    # left-most child
-        self.right = None                   # right-most child
-        self.descendent_list = np.zeros(0)  # all samples below it
-        self.children_list = np.zeros(0)    # all children directly below it
-
-    def __repr__(self):
-        return 'Ancestor {} with Mutations {:d}.'.format(self.identity, self.mutations)
 
 ########################### Main Simulation ###########################
 
@@ -137,82 +136,6 @@ def get_threshold(k_list, b_list):
     percent_correct = sum_correct / total_size
     return threshold_bbl, percent_correct
 
-def goodness_vs_threshold(goodness, bbl):
-    """
-    plots the goodness vs. Bottom Branch Length Threshold
-    @param goodness : 1-d Array - accumulation of correct predictions
-    @param bbl      : 1-d Array - BBL Threshold
-    """
-    plt.figure()
-    plt.plot(bbl, goodness, label='over time')
-    plt.xlim([-1, 10])
-    plt.title("Goodness vs BBL Threshold")
-    plt.show()
-
-def plot_accurate_thold(sample_size_range, accurate_threshold_bbl, refined_mu,
-                        param_list, model_list, color_list, stat_list):
-    """
-    plots various log-scaled versions of sample_size vs mu
-    """
-    for i in range(4):
-        plt.figure()
-        plt.scatter(sample_size_range, refined_mu, alpha=0.5, label="BBL")
-        if i == 1:
-            plt.xscale('log')
-            plt.xlabel('LOG')
-        elif i == 2:
-            plt.yscale('log')
-            plt.ylabel('LOG')
-        elif i == 3:
-            plt.xscale('log')
-            plt.xlabel('LOG')
-            plt.yscale('log')
-            plt.ylabel('LOG')
-        plt.show()
-
-def plot_data(result_list, percent_list, sample_size_range, mutation_rate_range,
-              model_list, color_list):
-
-    # Result List
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.gca(projection='3d')
-    plt.rcParams['legend.fontsize'] = 10
-
-    #for index in range(len(model_list)):
-    for i in range(len(sample_size_range)):
-        for j in range(len(mutation_rate_range)):
-            xs = sample_size_range[i]
-            ys = mutation_rate_range[j]
-            zs = result_list[i][j]
-            ax.scatter(xs, ys, zs, alpha=0.5,label="BBL" if i == 0 and j == 0 else "")
-
-
-    ax.set_xlabel('Sample Size')
-    ax.set_ylabel('Mutation Rate')
-    ax.set_zlabel('Bottom Branch Length Threshold Value')
-    plt.title('BBL Scatter Plot')
-    ax.legend(bbox_to_anchor=(0.35, 0.9))
-    plt.show()
-
-    # Percent_ilst
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.gca(projection='3d')
-    plt.rcParams['legend.fontsize'] = 10
-
-    # for index in range(len(model_list)):
-    for i in range(len(sample_size_range)):
-        for j in range(len(mutation_rate_range)):
-            xs = sample_size_range[i]
-            ys = mutation_rate_range[j]
-            zs = percent_list[i][j]
-            ax.scatter(xs, ys, zs, alpha=0.5, label="BBL" if i == 0 and j == 0 else "")
-
-    ax.set_xlabel('Sample Size')
-    ax.set_ylabel('Mutation Rate')
-    ax.set_zlabel('Percent Correct')
-    plt.title('Percent Correct Scatter Plot')
-    ax.legend(bbox_to_anchor=(0.35, 0.9))
-    plt.show()
 
 def all_ancestors(items):
     """
@@ -222,101 +145,15 @@ def all_ancestors(items):
 
 def __init_coalescent_list(sample_size):
     """
-    initializes coalescent lists for Kingman and Bolthausen-Sznitman simulation
+    initializes coalescent lists for Kingman and Bolthausen-Sznitman src
     @return: Tuple - ( 1-d Array - Kingman coalescent_list
                        1-d Array - Bolthausen-Sznitman coalescent_list
     """
     return np.array([Sample(i+1) for i in range(sample_size)]), np.array([Sample(i+1) for i in range(sample_size)])
 
-def __kingman_coalescence(sample_size, mu, coalescent_list,
-                          *data, newick=False):
-    """
-    models the Kingman coalescence
-    @param coalescent_list     : 1-d Array - holds samples
-    @param data                : Tuple     - (data_list, data_index) -> refer to __update_data
-    @param newick              : Bool      - refer to argument of simulation
-    """
-    gen_time = np.zeros(sample_size-1)  # coalescent time for each generation
-    nth_coalescence = 0  # Starting from 0
 
-    # Until reaching the Most Recent Common Ancestor
-    while np.size(coalescent_list) > 1:
-        # Time Calculation
-        time = np.random.exponential(1/__k_F(np.size(coalescent_list)))
-        gen_time[nth_coalescence] = time
-        nth_coalescence += 1
 
-        # merged ancestor of the coalescent event and its children obtained
-        consts = {'identity_count': nth_coalescence}
-        coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts)
 
-        # update the tree using mutations as branch length, recording data along the way
-        lists = {'coalescent_list': coalescent_list, 'children_list': children_list, 'gen_time': gen_time}
-        coalescent_list = __update_children(mu, ancestor, *data, **lists)
-        if all_ancestors(coalescent_list):
-            break
-
-def __bs_coalescence(sample_size, mu, coalescent_list,
-                     *data, newick=False):
-    """
-    models the Bolthausen-Sznitman coalescence
-    @param sample_size     : Int       - refer to argument of simulation
-    @param mu              : Float     - refer to argument of simulation
-    @param coalescent_list : 1-d Array - holds samples
-    @param data            : Tuple     - (data_list, data_index) -> refer to __update_data
-    @param newick          : Bool      - refer to argument of simulation
-    """
-    gen_time = np.zeros(sample_size - 1)  # coalescent time for each generation
-    nth_coalescence = 0  # Starting from 0
-
-    # Until reaching the Most Recent Common Ancestor
-    while np.size(coalescent_list) > 1:
-        # Time and Number of Children Calculation
-        m_list = np.arange(2, np.size(coalescent_list) + 1)
-        mn_rate = np.zeros(np.size(coalescent_list) - 1)
-        bsf_rate = np.zeros(np.size(coalescent_list) - 1)
-        mn_rate, total_rate = __b_F(mn_rate, np.size(coalescent_list))
-        for j in range(0, np.size(mn_rate)):
-            bsf_rate[j] = mn_rate[j] / total_rate
-        num_children = np.random.choice(m_list, 1, replace=False, p=bsf_rate)
-        time = np.random.exponential(1 / total_rate)
-        gen_time[nth_coalescence] = time
-        nth_coalescence += 1
-
-        # merged ancestor of the coalescent event and its children obtained
-        consts = {'identity_count': nth_coalescence, 'num_children': num_children}
-        coalescent_list, ancestor, children_list = __coalesce_children(coalescent_list, **consts)
-
-        # update the tree using mutations as branch length, recording data along the way
-        lists = {'coalescent_list': coalescent_list, 'children_list': children_list, 'gen_time': gen_time}
-
-        coalescent_list = __update_children(mu, ancestor, *data, **lists)
-        if all_ancestors(coalescent_list):
-            break
-
-def __k_F(n):
-    """
-    computes the Kingman function
-    @param n : Int   - current size of the coalescent list, i.e. number of samples available for coalescence
-    @return  : Float - Kingman function result
-    """
-    return n*(n-1) / 2
-
-def __b_F(mn_rate, n):
-    """
-    computes the Bolthausen-Sznitman function
-    @param mn_rate : 1-d Array -
-    @param n       : Int       - current size of the coalescent list, i.e. number of samples available for coalescence
-    @return        : Tuple     - ( mn_rate    : 1-d Array -
-                                   total_rate : 1-d Array - holds each i rate )
-    """
-    total_rate = 0
-    for i in range(n-1):
-        m = i + 2
-        i_rate = n / (m * (m-1))
-        mn_rate[i] = i_rate
-        total_rate += i_rate
-    return mn_rate, total_rate
 
 def __update_children(mu, ancestor, data_list, data_index, coalescent_list, children_list, gen_time):
     """
@@ -325,7 +162,7 @@ def __update_children(mu, ancestor, data_list, data_index, coalescent_list, chil
         2) based on 1), calculate the branch's mutation value
         3) perform appropriate tasks depending on what type the child is -> refer to comments below for details
     B. update the ancestor
-    @param mu               : Float     - refer to argument of simulation
+    @param mu               : Float     - refer to argument of src
     @param ancestor         : Ancestor  - newly merged ancestor
     @param data_list        : 2-d Array - to be updated
     @param data_index       : Int       - ensures each data is stored at right place
@@ -465,13 +302,16 @@ def __display_params(param_list, sample_size, mu):
     """
     displays values of initial parameters
     @param param_list  : 1-d Array - list of parameters
-    @param sample_size : Int       - refer to argument of simulation
-    @param mu          : Float     - refer to argument of simulation
+    @param sample_size : Int       - refer to argument of src
+    @param mu          : Float     - refer to argument of src
     """
     print("\n****** Running with: ******")
     for label, val in zip(param_list, (sample_size, mu)):
         print("   ",label, ":", val)
     print()
+
+
+# Quick Sort Children
 
 def __quicksort(children_list, first, last):
     """
@@ -496,37 +336,14 @@ def __partition(children_list, first, last):
     lo, hi = first + 1, last
     piv = children_list[first].big_pivot
     while True:
-        while lo <= hi and children_list[lo].big_pivot <= piv:
-            lo += 1
-        while hi >= lo and children_list[hi].big_pivot >= piv:
-            hi -= 1
-        if hi < lo:
-            break
+        while lo <= hi and children_list[lo].big_pivot <= piv: lo += 1
+        while hi >= lo and children_list[hi].big_pivot >= piv: hi -= 1
+        if hi < lo: break
         else:
             temp = children_list[lo]
             children_list[lo], children_list[hi] = children_list[hi], temp
-    if hi == first:
-        return hi
+    if hi == first: return hi
     part = children_list[first]
     children_list[first], children_list[hi] = children_list[hi], part
     return hi
 
-def __plot_histogram_each_data(data_k, data_b):
-    """
-    plots histogram for each kind of data collected for each tree
-    @param data_k : 2-d Array - holds kingman data
-    @param data_b : 2-d Array - holds bolthausen data
-    """
-    plt.figure()
-    num_linspace = 30
-    stat_min, stat_max = np.amin(np.append(data_k, data_b)), np.amax(np.append(data_k, data_b))
-    if np.absolute(stat_max-stat_min) >= 100:
-        num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
-    bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
-    plt.hist(data_k, facecolor='magenta', bins=bins, lw=1, alpha=0.5, label='Kingman')
-    plt.hist(data_b, facecolor='cyan', bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
-    plt.title('BBL')
-    plt.legend(loc='upper right')
-    plt.show()
-
-################################################################################
