@@ -2,13 +2,12 @@
 # ========================================= #
 # Coalescent Simulations APIs               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 09/03/2016                  #
+# last update : 03/17/2017                  #
 # ========================================= #
 
 import numpy as np
 from scipy.stats import poisson
 import matplotlib.pyplot as plt
-import sys
 
 ########################### Tree Node Objects ###########################
 
@@ -531,7 +530,3 @@ def __plot_histogram_each_data(data_k, data_b):
     plt.show()
 
 ################################################################################
-
-if __name__ == '__main__':
-    print("Not a main program, please run simulation.py")
-    sys.exit(0)

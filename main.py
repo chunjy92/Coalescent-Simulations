@@ -2,11 +2,11 @@
 # ========================================= #
 # Coalescent Simulations Main               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 09/03/2016                  #
+# last update : 03/17/2017                  #
 # ========================================= #
 
 import time
-from coal_sims_def import *
+from utils import *
 
 # Descriptions
 model_list  = ['Kingman', 'Bolthausen-Sznitman']
