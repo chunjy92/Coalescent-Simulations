@@ -6,6 +6,11 @@
 # ========================================= #
 
 import numpy as np
+from Bio import Phylo
+from io import StringIO
+# import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
@@ -232,3 +237,52 @@ def display_stats(data_k, data_b, model_list, stat_list):
 #         plt.title('PCA 3D')
 #         ax.legend(bbox_to_anchor=(0.35, 0.9))
 #         plt.show()
+
+########################### Optional : Display Tool ###########################
+
+def display_tree(ancestors):
+    """
+    displays the Newick Format in string Newick format and its Phylo visualization
+    @param ancestors : 1-d Array - root of the tree to be displayed
+    """
+    for i in range(len(ancestors)):
+        newick = __traversal(ancestors[i])
+        tree = Phylo.read(StringIO(str(newick)), 'newick')
+        Phylo.draw(tree)
+        print(newick)
+
+def __traversal(sample):
+    """
+    iterates through the tree rooted at the sample recursively in pre-order, building up a Newick format
+    @param sample  : Ancestor - root of the tree to be displayed
+    @return output : String   - complete newick format
+    """
+    output = ''
+    current = sample.right
+    output = __recur_traversal((output + '('), current)
+    while current.next != sample.left:
+        current = current.next
+        output = __recur_traversal(output + ', ', current)
+    current = sample.left
+    output = __recur_traversal(output + ', ', current) + ')' + str(sample.identity)
+    return output
+
+def __recur_traversal(output, sample):
+    """
+    appends the sample's information to the current Newick format, recursively travelling to the sample's leaves as necessary
+    @param output  : String            - incoming newick format to be appended new information
+    @param sample  : Ancestor / Sample - provides new information
+    @return output : String            - modified newick format
+    """
+    if sample.is_sample():
+        output = output + str(sample.identity) + ':' + str(sample.mutations)
+        return output
+    current = sample.right
+    output = __recur_traversal((output + '('), current)
+    while current.next != sample.left:
+        current = current.next
+        output = __recur_traversal(output + ', ', current)
+    current = sample.left
+    output = __recur_traversal((output + ', '), current)
+    output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
+    return output

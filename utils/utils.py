@@ -7,7 +7,7 @@
 
 import sys
 import numpy as np
-from scipy.stats import poisson
+from typing import List
 
 
 def select_mode():
@@ -137,166 +137,35 @@ def get_threshold(k_list, b_list):
     return threshold_bbl, percent_correct
 
 
-def all_ancestors(items):
+def check_all(items, type):
     """
     checks whether all items are of Ancestor type
     """
-    return all(isinstance(x, Ancestors) for x in items)
+    return all(isinstance(x, type) for x in items)
 
-def __init_coalescent_list(sample_size):
-    """
-    initializes coalescent lists for Kingman and Bolthausen-Sznitman src
-    @return: Tuple - ( 1-d Array - Kingman coalescent_list
-                       1-d Array - Bolthausen-Sznitman coalescent_list
-    """
-    return np.array([Sample(i+1) for i in range(sample_size)]), np.array([Sample(i+1) for i in range(sample_size)])
-
-
+# def __init_coalescent_list(sample_size):
+#     """
+#     initializes coalescent lists for Kingman and Bolthausen-Sznitman src
+#     @return: Tuple - ( 1-d Array - Kingman coalescent_list
+#                        1-d Array - Bolthausen-Sznitman coalescent_list
+#     """
+#     return np.array([Sample(i+1) for i in range(sample_size)]), np.array([Sample(i+1) for i in range(sample_size)])
 
 
 
-def __update_children(mu, ancestor, data_list, data_index, coalescent_list, children_list, gen_time):
-    """
-    A.for each child node under the ancestor, do:
-        1) calculate its time, taking into account the generation difference between the sample and its ancestor
-        2) based on 1), calculate the branch's mutation value
-        3) perform appropriate tasks depending on what type the child is -> refer to comments below for details
-    B. update the ancestor
-    @param mu               : Float     - refer to argument of src
-    @param ancestor         : Ancestor  - newly merged ancestor
-    @param data_list        : 2-d Array - to be updated
-    @param data_index       : Int       - ensures each data is stored at right place
-    @param coalescent_list  : 1-d Array - initial coalescent list
-    @param children_list    : 1-d Array - for analysis of each child in the list
-    @param gen_time         : 1-d Array - used to update time of each child to the ancestor
-    @return coalescent_list : 1-d Array - updated coalescent list
-    """
-    temp_list = np.copy(children_list)
-    children_index = 0  # index of changing children_list
 
-    ##########################################################################################
-    # BEGIN: iteration through the children_list
-    while children_index < np.size(temp_list):
-        current = temp_list[children_index]  # current child under inspection
 
-        __update_time(current, ancestor, gen_time)
-        current.mutations = poisson.rvs(mu * current.time)
 
-        # First Case : a Sample (Leaf Node)
-        if current.is_sample():
-            __update_data(data_list, data_index, *zip((0,), (current.mutations,)))
 
-        # Second Case : an Internal Node with Mutations == 0
-        elif not (current.is_sample()) and current.mutations == 0:
-            # Delete this Current Child from the Coalescent List
-            cond = coalescent_list == temp_list[children_index]
-            coalescent_list = np.delete(coalescent_list, int(np.where(cond)[0]))
 
-            # Replace this Current Child with its children nodes
-            temp_list = np.insert(temp_list, children_index, current.children_list)
-            temp_list = np.delete(temp_list, children_index + np.size(current.children_list))
 
-            # Create Linked List that Connects the Replacing children_list with the original children on its left if it exists
-            if children_index > 0:
-                temp_list[children_index].next = temp_list[children_index-1]
-            # Increase the index appropriately by jumping over the current child's children
-            children_index += (np.size(current.children_list)-1)
 
-        # Third Case : an Internal Node with Mutations > 0
-        #else:
-        #    __update_data(data_list, data_index, *zip((0,), (current.mutations,)))
 
-        # Delete Current Child from the Coalescent List (unless Deleted alrdy in the Second Case)
-        cond = coalescent_list == temp_list[children_index]
-        if True in cond:
-            coalescent_list = np.delete(coalescent_list, int(np.where(cond)[0]))
 
-        # Link current child to its left
-        if children_index > 0:
-            current.next = temp_list[children_index - 1]
 
-        # increase indices
-        children_index += 1
-    # END: iteration through the children_list
-    ##########################################################################################
 
-    # Update new information to the ancestor
-    __update_ancestor(ancestor, temp_list)
 
-    return coalescent_list
 
-def __coalesce_children(coalescent_list, identity_count, num_children=2):
-    """
-    Given a number of children to be merged, perform a coalescent event that creates a merged ancestor
-    @param coalescent_list : 1-d Array - holds samples currently available for new coalescence
-    @param identity_count  : Int       - distinct ID number to create a new merged sample
-    @param num_children    : Int       - number of children to be coalesced, 2 by default
-    @return                : Tuple     - ( coalescent_list : 1-d Array - updated coalescent list
-                                           merge_sample    : Ancestor  - new merged sample
-                                           children_list   : 1-d Array - Ancestor's direct children )
-    """
-    # Create an Internal Node Representing a Coalescent Event
-    merge_sample = Ancestors(identity_count)
-
-    # The merge_sample's immediate children chosen
-    children_list = np.random.choice(coalescent_list, num_children, replace=False)
-    __quicksort(children_list, 0, np.size(children_list)-1)  # sorted for visual ease
-    coalescent_list = np.append(coalescent_list, merge_sample)
-    return coalescent_list, merge_sample, children_list
-
-def __update_descendent_list(children_list):
-    """
-    creates a descendent list by replacing samples in the children list with its own descendent list
-    @param children_list    : 1-d Array - for each children in the list, see what samples are below it and compile them
-    @return descendent_list : 1-d Array - newly created descendent_list
-    """
-    descendent_list = np.copy(children_list)
-    i = 0
-    while i < np.size(descendent_list):
-        if not(descendent_list[i].is_sample()):
-            # insert the internal node's own descendent list at the node's index in the current descendent_list
-            # -> since the node is below the sample, its descdent list must have already been updated
-            size = np.size(descendent_list[i].descendent_list)
-            descendent_list = np.insert(descendent_list, i, descendent_list[i].descendent_list)
-
-            # remove the given internal node from the descendent list -> we only want the samples, not the internal nodes
-            descendent_list = np.delete(descendent_list, i+size)
-            i += size
-        else:       # if sample,
-            i += 1  # move to the next on the descendent list
-    return descendent_list
-
-def __update_time(sample, ancestor, gen_time):
-    """
-    adds up the between-generation time
-    @param sample   : Ancestor / Sample - sample whose coalescent time to its ancestor is to be calculated
-    @param ancestor : Ancestor          - newly merged ancestor
-    @param gen_time : 1-d Array         - holds coalescent time between generations
-    """
-    for j in range(ancestor.generation-1, sample.generation-1, -1):
-        sample.time += gen_time[j]
-
-def __update_ancestor(ancestor, children_list):
-    """
-    assigns new attributes to the merged ancestor
-    @param ancestor      : Ancestor  - newly merged ancestor, represents a single coalescent event
-    @param children_list : 1-d Array - nodes that are derived from the ancestor
-    """
-    ancestor.children_list = children_list
-    ancestor.descendent_list = __update_descendent_list(children_list)
-    ancestor.right = children_list[np.size(children_list)-1]
-    ancestor.big_pivot = ancestor.right.big_pivot
-    ancestor.left = ancestor.children_list[0]
-
-def __update_data(data_list, data_index, *data):
-    """
-    updates the data list
-    @param data_list  : 2-d Array - holds overall data
-    @param data_index : Int       - ensures each data is stored at right place
-    @param data       : Tuple     - (index, value) where the value is to be added to the data_list at the index
-    """
-    for index, value in data:
-        data_list[data_index][index] += value
 
 def __display_params(param_list, sample_size, mu):
     """
@@ -311,39 +180,6 @@ def __display_params(param_list, sample_size, mu):
     print()
 
 
-# Quick Sort Children
 
-def __quicksort(children_list, first, last):
-    """
-    sorts the children_list based on the value of big_pivot
-    @param children_list : 1-d Array - target to be sorted
-    @param first         : Int       - index of first element
-    @param last          : Int       - index of last element
-    """
-    if first < last:
-        splitpoint = __partition(children_list, first, last)
-        __quicksort(children_list, first, splitpoint-1)
-        __quicksort(children_list, splitpoint+1, last)
 
-def __partition(children_list, first, last):
-    """
-    partitions in place
-    @param children_list : 1-d Array - target to be sorted
-    @param first         : Int       - index of first element
-    @param last          : Int       - index of last element
-    @return hi           : Int       - index at which partition will occur
-    """
-    lo, hi = first + 1, last
-    piv = children_list[first].big_pivot
-    while True:
-        while lo <= hi and children_list[lo].big_pivot <= piv: lo += 1
-        while hi >= lo and children_list[hi].big_pivot >= piv: hi -= 1
-        if hi < lo: break
-        else:
-            temp = children_list[lo]
-            children_list[lo], children_list[hi] = children_list[hi], temp
-    if hi == first: return hi
-    part = children_list[first]
-    children_list[first], children_list[hi] = children_list[hi], part
-    return hi
 

@@ -7,7 +7,8 @@
 
 import numpy as np
 
-########################### Tree Node Objects ###########################
+
+########################### Tree Node Class ###########################
 
 class Sample:  # Leaf of Tree
     def __init__(self, identity_count):
@@ -37,10 +38,11 @@ class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
         self.identity = 'A{}'.format(identity_count)
         self.generation = identity_count
         self.height = 0
-        self.left = None                    # left-most child
-        self.right = None                   # right-most child
+        self.left = None           # left-most child
+        self.right = None          # right-most child
         self.descendent_list = np.zeros(0)  # all samples below it
         self.children_list = np.zeros(0)    # all children directly below it
 
     def __repr__(self):
         return 'Ancestor {} with Mutations {}.'.format(self.identity, self.mutations)
+
