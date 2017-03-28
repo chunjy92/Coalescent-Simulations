@@ -35,10 +35,7 @@ def main(test=False, exp=False, verbose=False):
         iter_num = 1
 
         # request user input
-        sample_size, mu, iter_num = request_user_input(PARAMS, default)
-
-
-
+        # sample_size, mu, iter_num = request_user_input(PARAMS, default)
 
         display_params((sample_size, mu, iter_num))
 
