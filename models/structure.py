@@ -2,11 +2,10 @@
 # ========================================= #
 # Coalescent Simulations Tree Structure     #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/17/2017                  #
+# last update : 03/27/2017                  #
 # ========================================= #
 
-import numpy as np
-
+__author__ = 'Jayeol Chun'
 
 ########################### Tree Node Class ###########################
 
@@ -40,9 +39,8 @@ class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
         self.height = 0
         self.left = None           # left-most child
         self.right = None          # right-most child
-        self.descendent_list = np.zeros(0)  # all samples below it
-        self.children_list = np.zeros(0)    # all children directly below it
+        self.descendent_list = []  # all samples below it
+        self.children_list = []    # all children directly below it
 
     def __repr__(self):
         return 'Ancestor {} with Mutations {}.'.format(self.identity, self.mutations)
-

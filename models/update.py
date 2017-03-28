@@ -2,10 +2,10 @@
 # ========================================= #
 # Models Update Utils                       #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/26/2017                  #
+# last update : 03/27/2017                  #
 # ========================================= #
 
-import numpy as np
+__author__ = 'Jayeol Chun'
 
 def update_time(sample, ancestor, gen_time):
     """
@@ -14,7 +14,7 @@ def update_time(sample, ancestor, gen_time):
     @param ancestor : Ancestor          - newly merged ancestor
     @param gen_time : 1-d Array         - holds coalescent time between generations
     """
-    for j in range(ancestor.generation - 1, sample.generation - 1, -1):
+    for j in range(ancestor.generation-1, sample.generation-1, -1):
         sample.time += gen_time[j]
 
 
@@ -37,7 +37,7 @@ def update_ancestor(ancestor, children_list):
     """
     ancestor.children_list = children_list
     ancestor.descendent_list = _update_descendent_list(children_list)
-    ancestor.right = children_list[np.size(children_list) - 1]
+    ancestor.right = children_list[len(children_list)-1]
     ancestor.big_pivot = ancestor.right.big_pivot
     ancestor.left = ancestor.children_list[0]
 
@@ -48,18 +48,21 @@ def _update_descendent_list(children_list):
     @param children_list    : 1-d Array - for each children in the list, see what samples are below it and compile them
     @return descendent_list : 1-d Array - newly created descendent_list
     """
-    descendent_list = np.copy(children_list)
+    descendent_list = children_list[:]
     i = 0
-    while i < np.size(descendent_list):
-        if not(descendent_list[i].is_sample()):
+    while i < len(descendent_list):
+        if descendent_list[i].is_sample():
+            i += 1
+        else:
+
+
+        # if not(descendent_list[i].is_sample()):
             # insert the internal node's own descendent list at the node's index in the current descendent_list
             # -> since the node is below the sample, its descdent list must have already been updated
-            size = np.size(descendent_list[i].descendent_list)
-            descendent_list = np.insert(descendent_list, i, descendent_list[i].descendent_list)
+            size = len(descendent_list[i].descendent_list)
 
-            # remove the given internal node from the descendent list -> we only want the samples, not the internal nodes
-            descendent_list = np.delete(descendent_list, i+size)
+            descendent_list[i:i] = descendent_list[i].descendent_list
+            del descendent_list[i+size]
+
             i += size
-        else:       # if sample,
-            i += 1  # move to the next on the descendent list
     return descendent_list

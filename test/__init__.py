@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-                     #
 # ========================================= #
-# Utilities Package init                    #
+# UnitTesting Package init                  #
 # author      : Che Yeol (Jayeol) Chun      #
 # last update : 03/27/2017                  #
 # ========================================= #

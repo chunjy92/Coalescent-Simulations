@@ -2,11 +2,13 @@
 # ========================================= #
 # Quicksort Util                            #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/26/2017                  #
+# last update : 03/27/2017                  #
 # ========================================= #
 
 from typing import List, TypeVar
 from models.structure import Sample, Ancestors
+
+__author__ = 'Jayeol Chun'
 
 T = TypeVar('T', Sample, Ancestors)
 
