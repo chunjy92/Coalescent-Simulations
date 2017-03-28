@@ -6,11 +6,11 @@
 # ========================================= #
 
 from typing import List, TypeVar
-from models.structure import Sample, Ancestors
+from models.structure import *
 
 __author__ = 'Jayeol Chun'
 
-T = TypeVar('T', Sample, Ancestors)
+T = TypeVar('T', Sample, Ancestor)
 
 def quicksort(children_list: List[T], first: int, last: int):
     """
@@ -22,7 +22,7 @@ def quicksort(children_list: List[T], first: int, last: int):
         quicksort(children_list, splitpoint+1, last)
 
 
-def _partition(children_list: List[T], first: int, last: int):
+def _partition(children_list: List[T], first: int, last: int) -> int:
     """
     partitions in place
     """

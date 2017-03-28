@@ -12,7 +12,7 @@ from models.model_template import Model
 
 __author__ = 'Jayeol Chun'
 
-T = TypeVar('T', Sample, Ancestors)
+T = TypeVar('T', Sample, Ancestor)
 
 class Kingman(Model):
     def __init__(self, n: int, mu: int, coalescent_list: List[T] = None,
@@ -28,7 +28,7 @@ class Kingman(Model):
         return n * (n - 1) / 2
 
     def coalesce(self, coalescent_list: List[Sample],
-                 data: Tuple[int, List[List[float]]], verbose=False) -> Ancestors:
+                 data: np.ndarray, verbose=False) -> Ancestor:
         '''
 
         :param coalescent_list:
@@ -62,20 +62,20 @@ class Kingman(Model):
                 print("Now, the coalescent list is:")
                 print(coalescent_list)
 
-        assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestors, \
+        assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestor, \
             "There was an error in simulating a Coalescent event." \
             "Make sure you are providing at least two Samples for the merging to take place."
         return coalescent_list.pop()
 
 
 class BolthausenSznitman(Model):
-    def __init__(self, n: int, mu: int, coalescent_list: List[T] = None,
-                 data: List[float] = None):  # change data typing
+    def __init__(self, n: int, mu: int, coalescent_list: List[T]=None,
+                 data: List[float]=None):  # change data typing
         super().__init__(n, mu)
         self.coalescent_list = coalescent_list
         self.data = data
 
-    def F(self, n: int, rate: np.ndarray = None) -> Tuple[List[float], float]:
+    def F(self, n: int, rate: np.ndarray=None) -> Tuple[np.ndarray, float]:
         """
         Bolthausen-Sznitman function
         @param mn_rate : 1-d Array -
@@ -92,7 +92,7 @@ class BolthausenSznitman(Model):
         return rate, total_rate
 
     def coalesce(self, coalescent_list: List[Sample],
-                 data: Tuple[int, List[List[float]]], verbose=False) -> Ancestors:
+                 data: np.ndarray, verbose=False) -> Ancestor:
         """
         models the Bolthausen-Sznitman coalescence
         @param sample_size     : Int       - refer to argument of src
@@ -133,7 +133,7 @@ class BolthausenSznitman(Model):
                 print("Now, the coalescent list is:")
                 print(coalescent_list)
 
-        assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestors, \
+        assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestor, \
             "There was an error in simulating a Coalescent event." \
             "Make sure you are providing at least two Samples for the merging to take place."
         return coalescent_list.pop()

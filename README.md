@@ -7,7 +7,7 @@ Current Status : March 2017 ~
 Model test
 
 ```
-python main.py -T
+python main.py -t
 ```
 
 

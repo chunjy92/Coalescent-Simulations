@@ -39,6 +39,49 @@ def select_mode():
             sys.exit(1)
     return mode
 
+
+def request_user_input(params, default_vals):
+    for param, val in zip(params, default_vals):
+        dtype = type(val)
+        param = param.title().replace('_', ' ')
+        while True:
+         value = input("Please write custom value for " + param + " (only " + dtype + " accepted): ")
+
+    pass
+
+
+def _request_user_input(vals, *args, multiple_choice=False):
+    """
+    handles user input
+    @param vals            : List        - holds data name and default data value
+    @param args            : Tuple       - pre-defined options for multiple choice
+    @param multiple_choice : Bool        - lists options if True
+    @return value          : Int / Float - result that matches user input
+    """
+    accepted_range = " >= 0"
+    value_name, data_type = vals[0], str(type(vals[1])).split("\'")[1]
+    if multiple_choice:
+        print("Available options:")
+        _range = ()
+        diction = dict(args)
+        for arg1, arg2 in args:
+            print(arg1, ":", arg2)
+            _range += (arg1,)
+        accepted_range = " in _range"
+    while True:
+        value = input("Please write custom value for " + value_name + " (only " + data_type + " accepted): ")
+        try:
+            value = float(value) if "float" in data_type else int(value)
+            if eval(str(value) + accepted_range):
+                if multiple_choice:  value = diction[value]
+                break
+            else:
+                print("Value outside of the Accepted Range")
+        except ValueError:
+            print("Wrong Input, please write", data_type, "for", value_name)
+    print("Your input for", value_name, ":", value)
+    return value
+
 ########################### Main Simulation ###########################
 
 # def iterate(num_iter_each, sample_size_range, init_mu,

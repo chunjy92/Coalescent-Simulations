@@ -9,13 +9,14 @@ import numpy as np
 from scipy.stats import poisson
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Callable, TypeVar
+
 from utils.sorting import quicksort
 from models.update import *
-from models.structure import Sample, Ancestors
+from models.structure import *
 
 __author__ = 'Jayeol Chun'
 
-T = TypeVar('T', Sample, Ancestors)
+T = TypeVar('T', Sample, Ancestor)
 
 class Model(ABC):
     def __init__(self, n, mu):
@@ -54,7 +55,7 @@ class Model(ABC):
 
     @abstractmethod
     def coalesce(self, coalescent_list: List[Sample],
-                 data: Tuple[int, List[List[float]]], verbose=False) -> Ancestors:
+                 data: np.ndarray, verbose=False) -> Ancestor:
         pass
 
 
@@ -64,7 +65,7 @@ class Model(ABC):
         '''
 
         # Create an Internal Node Representing a Coalescent Event
-        merged_ancestor = Ancestors(merge_identity)
+        merged_ancestor = Ancestor(merge_identity)
 
         # The merge_sample's immediate children chosen
         children = np.random.choice(self.coalescent_list, num_children, replace=False).tolist()

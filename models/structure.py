@@ -28,12 +28,12 @@ class Sample:  # Leaf of Tree
     def is_sample(self):
         return 'A' not in self.identity
 
-class Ancestors(Sample):  # Internal Node of Tree, inherits Sample
+class Ancestor(Sample):  # Internal Node of Tree, inherits Sample
     def __init__(self, identity_count):
         """
         @param identity_count: Int - unique ID number to distinguish this ancestor from the rest
         """
-        super(self.__class__, self).__init__(identity_count)
+        super().__init__(identity_count)
         self.identity = 'A{}'.format(identity_count)
         self.generation = identity_count
         self.height = 0

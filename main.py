@@ -5,36 +5,40 @@
 # last update : 03/27/2017                  #
 # ========================================= #
 
-import time
 import argparse
-import sys
+import time
 
-# from utils.visualization.plots import plot_accurate_thold
 from models.models import *
-from models.structure import Sample
+from utils.display import *
 from utils.utils import *
-from utils.visualization.display import *
 
 __author__ = 'Jayeol Chun'
 
 # Descriptions
 MODELS = [Kingman, BolthausenSznitman]
 STATS  = ['Bottom Branch Length']
-#
+
 # color_list  = ['magenta', 'cyan']
-# param_list  = ["sample_size", "mutation_rate"]
+PARAMS = ["sample_size", "mutation_rate", "num_iter"]
 
 def main(test=False, exp=False, verbose=False):
     print("*** Coalescent Simulations Running ***")
     if test:
         print("*** Test Mode ***")
         if verbose: print("--- Verbosity Increased")
+
+        default = (10, 0.9, 1)
+
         # default params
         sample_size = 10
         mu = 0.9
         iter_num = 1
 
         # request user input
+        sample_size, mu, iter_num = request_user_input(PARAMS, default)
+
+
+
 
         display_params((sample_size, mu, iter_num))
 
@@ -59,11 +63,11 @@ if __name__ == '__main__':
     # parser.add_argument("--model", "-M", action="store_true",
     #                     help="option to specify coalescent model. DO NOT include "
     #                          "for comparative analysis between models")
-    parser.add_argument("--test", "-T", action="store_true",
+    parser.add_argument("--test", "-t", action="store_true",
                         help="test by creating and plotting trees for each model")
     # parser.add_argument("--e", "-E", action="store_true",
     #                     help="run experiments ; will be prompted for experimental settings and hyperparameter values")
-    parser.add_argument("--verbose", "-V", action="store_true",
+    parser.add_argument("--verbose", "-v", action="store_true",
                         help="increase output verbosity")
     args = parser.parse_args()
     # main(args.m, args.e, args.v)
