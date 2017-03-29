@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations Visualization      #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 03/28/2017                  #
 # ========================================= #
 
 import numpy as np

@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations Main Helper        #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 03/28/2017                  #
 # ========================================= #
 
 import sys
@@ -40,14 +40,28 @@ def select_mode():
     return mode
 
 
-def request_user_input(params, default_vals):
-    for param, val in zip(params, default_vals):
-        dtype = type(val)
-        param = param.title().replace('_', ' ')
+def request_user_input(params, default):
+    res = []
+    for param, val in zip(params, default):
+        dtype = str(type(val)).split("\'")[1]
+        counter = 0
         while True:
-         value = input("Please write custom value for " + param + " (only " + dtype + " accepted): ")
-
-    pass
+            value = input("\nPlease write custom value for {} (only {} accepted)\nOr write 'd' for default setting: ".format(param, dtype))
+            try:
+                value = int(value) if dtype=='int' else float(value)
+                if value > 0:
+                    break
+                print("--- Wrong Input, value cannot be negative.")
+            except ValueError:
+                if value == 'd': return default
+                print("--- Wrong Input, please write", dtype, "for", param)
+            counter += 1
+            if counter > 2:
+                print("\n*** Error receiving user input. Running with default params..")
+                return default
+        res.append(value)
+    if len(res) != len(default): return default
+    return res
 
 
 def _request_user_input(vals, *args, multiple_choice=False):

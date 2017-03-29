@@ -2,7 +2,7 @@
 # ========================================= #
 # Models                                    #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 03/28/2017                  #
 # ========================================= #
 
 import numpy as np
@@ -65,7 +65,9 @@ class Kingman(Model):
         assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestor, \
             "There was an error in simulating a Coalescent event." \
             "Make sure you are providing at least two Samples for the merging to take place."
-        return coalescent_list.pop()
+        root = coalescent_list.pop()
+        root.identity = 'K'
+        return root
 
 
 class BolthausenSznitman(Model):
@@ -136,4 +138,6 @@ class BolthausenSznitman(Model):
         assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestor, \
             "There was an error in simulating a Coalescent event." \
             "Make sure you are providing at least two Samples for the merging to take place."
-        return coalescent_list.pop()
+        root = coalescent_list.pop()
+        root.identity = 'B'
+        return root

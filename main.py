@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations Main               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 03/28/2017                  #
 # ========================================= #
 
 import argparse
@@ -17,17 +17,16 @@ __author__ = 'Jayeol Chun'
 # Descriptions
 MODELS = [Kingman, BolthausenSznitman]
 STATS  = ['Bottom Branch Length']
+# PARAMS = ["Sample Size", "Mutation Rate", "Number of Iterations"]
 
 # color_list  = ['magenta', 'cyan']
-PARAMS = ["sample_size", "mutation_rate", "num_iter"]
 
-def main(test=False, exp=False, verbose=False):
+
+def main(test=False, verbose=False):
     print("*** Coalescent Simulations Running ***")
     if test:
         print("*** Test Mode ***")
         if verbose: print("--- Verbosity Increased")
-
-        default = (10, 0.9, 1)
 
         # default params
         sample_size = 10
@@ -35,8 +34,10 @@ def main(test=False, exp=False, verbose=False):
         iter_num = 1
 
         # request user input
+        # default = (10, 0.9, 1)
         # sample_size, mu, iter_num = request_user_input(PARAMS, default)
 
+        display = iter_num < 3
         display_params((sample_size, mu, iter_num))
 
         for model in MODELS:
@@ -46,7 +47,7 @@ def main(test=False, exp=False, verbose=False):
             for i in range(iter_num):
                 coalescent_list = [Sample(i+1) for i in range(sample_size)]
                 root = model.coalesce(coalescent_list, (i, data), verbose=verbose)
-                display_tree(root, verbose=verbose)
+                if display: display_tree(root, verbose=verbose)
 
     else: # comparative studies between models
         pass

@@ -2,7 +2,7 @@
 # ========================================= #
 # Display Utils                             #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 03/28/2017                  #
 # ========================================= #
 
 from typing import TypeVar, Tuple
@@ -14,7 +14,7 @@ __author__ = 'Jayeol Chun'
 
 T = TypeVar('T', Sample, Ancestor)
 
-def display_params(args: Tuple[float]):
+def display_params(args):
     print("\n****** Running with: ******")
     params = ['Sample Size', 'Mutation Rate', 'Number of Iterations']
     for param, arg in zip(params,args):
