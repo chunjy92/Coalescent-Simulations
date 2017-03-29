@@ -66,7 +66,7 @@ class Kingman(Model):
             "There was an error in simulating a Coalescent event." \
             "Make sure you are providing at least two Samples for the merging to take place."
         root = coalescent_list.pop()
-        root.identity = 'K'
+        root.identity = root.identity.replace('A','K')
         return root
 
 
@@ -139,5 +139,5 @@ class BolthausenSznitman(Model):
             "There was an error in simulating a Coalescent event." \
             "Make sure you are providing at least two Samples for the merging to take place."
         root = coalescent_list.pop()
-        root.identity = 'B'
+        root.identity = root.identity.replace('A', 'B')
         return root

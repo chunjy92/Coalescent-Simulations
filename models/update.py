@@ -2,7 +2,7 @@
 # ========================================= #
 # Models Update Utils                       #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 03/28/2017                  #
 # ========================================= #
 
 from typing import TypeVar, List
@@ -21,18 +21,6 @@ def update_time(sample: Ancestor, ancestor: Ancestor, gen_time: List[float]):
     """
     for j in range(ancestor.generation-1, sample.generation-1, -1):
         sample.time += gen_time[j]
-
-
-# update needed
-def update_data(data_list, data_index, *data):
-    """
-    updates the data list
-    @param data_list  : 2-d Array - holds overall data
-    @param data_index : Int       - ensures each data is stored at right place
-    @param data       : Tuple     - (index, value) where the value is to be added to the data_list at the index
-    """
-    for index, value in data:
-        data_list[data_index][index] += value
 
 
 def update_ancestor(ancestor: Ancestor, children_list: List[T]):

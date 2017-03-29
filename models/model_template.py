@@ -9,7 +9,6 @@ import numpy as np
 from scipy.stats import poisson
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Callable, TypeVar
-
 from utils.sorting import quicksort
 from models.update import *
 from models.structure import *
@@ -58,6 +57,17 @@ class Model(ABC):
                  data: np.ndarray, verbose=False) -> Ancestor:
         pass
 
+    # update needed
+    def update_data(self, data_index, *data):
+        """
+        updates the data list
+        @param data_list  : 2-d Array - holds overall data
+        @param data_index : Int       - ensures each data is stored at right place
+        @param data       : Tuple     - (index, value) where the value is to be added to the data_list at the index
+        """
+        for index, value in data:
+            self.data[data_index][index] += value
+
 
     def merge(self, merge_identity, num_children=2):
         '''
@@ -95,7 +105,7 @@ class Model(ABC):
 
             # First Case : a Sample (Leaf Node)
             if current.is_sample():
-                update_data(self.data, data_index, *zip((0,), (current.mutations,)))
+                self.update_data(data_index, (0, current.mutations)) # 0, when only considering bottom branch length
 
             # Second Case : an Internal Node with Mutations == 0
             elif current.mutations==0:

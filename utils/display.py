@@ -18,7 +18,7 @@ def display_params(args):
     print("\n****** Running with: ******")
     params = ['Sample Size', 'Mutation Rate', 'Number of Iterations']
     for param, arg in zip(params,args):
-        print('\t{:}: {:>}'.format(param, arg))
+        print('\t{}: {}'.format(param, arg))
 
 
 def display_tree(ancestor: Ancestor, verbose=False):

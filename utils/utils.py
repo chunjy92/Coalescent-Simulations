@@ -6,8 +6,6 @@
 # ========================================= #
 
 import sys
-import numpy as np
-from typing import List
 
 __author__ = 'Jayeol Chun'
 
@@ -62,39 +60,6 @@ def request_user_input(params, default):
         res.append(value)
     if len(res) != len(default): return default
     return res
-
-
-def _request_user_input(vals, *args, multiple_choice=False):
-    """
-    handles user input
-    @param vals            : List        - holds data name and default data value
-    @param args            : Tuple       - pre-defined options for multiple choice
-    @param multiple_choice : Bool        - lists options if True
-    @return value          : Int / Float - result that matches user input
-    """
-    accepted_range = " >= 0"
-    value_name, data_type = vals[0], str(type(vals[1])).split("\'")[1]
-    if multiple_choice:
-        print("Available options:")
-        _range = ()
-        diction = dict(args)
-        for arg1, arg2 in args:
-            print(arg1, ":", arg2)
-            _range += (arg1,)
-        accepted_range = " in _range"
-    while True:
-        value = input("Please write custom value for " + value_name + " (only " + data_type + " accepted): ")
-        try:
-            value = float(value) if "float" in data_type else int(value)
-            if eval(str(value) + accepted_range):
-                if multiple_choice:  value = diction[value]
-                break
-            else:
-                print("Value outside of the Accepted Range")
-        except ValueError:
-            print("Wrong Input, please write", data_type, "for", value_name)
-    print("Your input for", value_name, ":", value)
-    return value
 
 ########################### Main Simulation ###########################
 
