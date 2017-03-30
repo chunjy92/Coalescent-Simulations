@@ -3,7 +3,7 @@ First Implementation : 2015 ~ 2016 Academic year
 
 Current Status : March 2017 ~
 
-## Dependenciese
+## Dependencies
 
 * Python 3.6
 * Requirements:
@@ -14,7 +14,7 @@ Current Status : March 2017 ~
   * scipy==0.19.0
 
 ## Usage
-Model test
+1. Model test
 
 ```
 python main.py -t
