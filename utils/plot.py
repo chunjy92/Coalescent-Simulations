@@ -2,13 +2,10 @@
 # ========================================= #
 # Coalescent Simulations Visualization      #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/28/2017                  #
+# last update : 03/29/2017                  #
 # ========================================= #
 
 import numpy as np
-# import matplotlib.pyplot as plt
-import matplotlib as mpl
-mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 
 __author__ = 'Jayeol Chun'
@@ -130,112 +127,109 @@ def display_stats(data_k, data_b, model_list, stat_list):
               "\n", k_stats[1][i], "    ", b_stats[1][i])
     print()
 
-# def plot_histogram_each_data(data_k, data_b, num_linspace=30):
-#     """
-#     plots histogram for each kind of data collected for each tree
-#     @param data_k       : 2-d Array - holds kingman data
-#     @param data_b       : 2-d Array - holds bolthausen data
-#     @param num_linspace : Int       - defines how to space out the histogram bin
-#     """
-#     for i in range(m):
-#         plt.figure()
-#         stat_min, stat_max = np.amin(np.append(data_k[i], data_b[i])), np.amax(np.append(data_k[i], data_b[i]))
-#         if np.absolute(stat_max-stat_min) >= 100: num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
-#         bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
-#         plt.hist(data_k[i], facecolor=color_list[0], bins=bins, lw=1, alpha=0.5, label='Kingman')
-#         plt.hist(data_b[i], facecolor=color_list[1], bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
-#         plt.title(stat_list[i])
-#         plt.legend(loc='upper right')
-#         plt.show()
+def plot_histogram_each_data(data_k, data_b, num_linspace=30):
+    """
+    plots histogram for each kind of data collected for each tree
+    @param data_k       : 2-d Array - holds kingman data
+    @param data_b       : 2-d Array - holds bolthausen data
+    @param num_linspace : Int       - defines how to space out the histogram bin
+    """
+    for i in range(m):
+        plt.figure()
+        stat_min, stat_max = np.amin(np.append(data_k[i], data_b[i])), np.amax(np.append(data_k[i], data_b[i]))
+        if np.absolute(stat_max-stat_min) >= 100: num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
+        bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
+        plt.hist(data_k[i], facecolor=color_list[0], bins=bins, lw=1, alpha=0.5, label='Kingman')
+        plt.hist(data_b[i], facecolor=color_list[1], bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
+        plt.title(stat_list[i])
+        plt.legend(loc='upper right')
+        plt.show()
 
-# def plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
-#     """
-#     plots histogram for the decision function produced by SVC
-#     @param SVC_dec : 1-d Array - refer to return of get_decision_function
-#     @param k_dec   : 1-d Array - refer to return of get_decision_function
-#     @param b_dec   : 1-d Array - refer to return of get_decision_function
-#     """
-#     plt.figure()
-#     bins = np.linspace(np.ceil(np.amin(SVC_dec)) - 10, np.ceil(np.amax(SVC_dec)) + 10, 100)
-#     plt.hist(k_dec, bins, facecolor=color_list[0], alpha=0.5, label='Kingman')
-#     plt.hist(b_dec, bins, facecolor=color_list[1], alpha=0.5, label='Bolthausen-Sznitman')
-#     plt.title('Frequency of Decision Function Values: {:d} Executions'.format(n))
-#     plt.xlabel('Decision Function Value')
-#     plt.ylabel('Frequencies')
-#     plt.legend(loc='upper right')
-#     plt.show()
-#
-# def plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
-#     """
-#     plots ROC Curve
-#     @param X_train_scaled : 2-d Array  - refer to return of scale_X
-#     @param X_test_scaled  : 2-d Array  - refer to return of scale_X
-#     @param y_train        : 1-d Array  - refer to return of preprocess_data
-#     @param y_test         : 1-d Array  - refer to return of preprocess_data
-#     """
-#     lr_clf = LogisticRegression()
-#     lr_clf.fit(X_train_scaled, y_train)
-#     pred_ROC = lr_clf.predict_proba(X_test_scaled)
-#     false_positive_rate, recall, thresholds = metrics.roc_curve(y_test, pred_ROC[:, 1])
-#     roc_auc = metrics.auc(false_positive_rate, recall)
-#
-#     plt.figure()
-#     plt.title('Receiver Operating Chraracteristic (ROC) Curve')
-#     plt.plot(false_positive_rate, recall, 'b', label='AUC = {:.2f}'.format(roc_auc))
-#     plt.legend(loc='lower right')
-#     plt.plot([0, 1], [0, 1], 'r--')
-#     plt.xlim([0.0, 1.0])
-#     plt.ylim([0.0, 1.0])
-#     plt.xlabel('Fall-Out')
-#     plt.ylabel('Recall')
-#     plt.show()
-#
-# def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comments
-#     """
-#     performs pca to n_comp number of components and plots the 2-d result
-#     @param X_train_raw : 2-d Array - refer to return of preprocess_data
-#     @param X_test_raw  : 2-d Array - refer to return of preprocess_data
-#     @param y           : 1-d Array - refer to return of preprocess_data
-#     @param coef        : Int       - refer to return of define_classifier
-#     @param n_comp      : Int       - number of principal components to keep
-#     """
-#     pca = decomposition.PCA(n_components=1)  # 7 features
-#     pca_X = np.zeros_like(X_test_raw)
-#     for i in range(len(pca_X)):
-#         pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
-#     dec_pca = pca.fit_transform(pca_X).ravel()
-#
-#     plt.figure()
-#     for i in range(len(model_list)):
-#         xs = SVC_dec[y_test == i]
-#         ys = dec_pca[y_test == i]
-#         plt.scatter(xs, ys, c=color_list[i], label=model_list[i])
-#     plt.title('PCA 2D')
-#     plt.legend(loc='upper right')
-#     plt.show()
-#
-#     # optional
-#     if three_d:
-#         pca = decomposition.PCA(n_components=2)  # 7 features
-#         pca_X = np.zeros_like(X_test_raw)
-#         for i in range(len(pca_X)):
-#             pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
-#         dec_pca = pca.fit_transform(pca_X)
-#
-#         fig = plt.figure(figsize=(10, 8))
-#         ax = fig.gca(projection='3d')
-#         plt.rcParams['legend.fontsize'] = 10
-#         for i in range(len(model_list)):
-#             xs = dec_pca[:, 0][y_test == i]
-#             ys = dec_pca[:, 1][y_test == i]
-#             zs = SVC_dec[y_test == i]
-#             ax.scatter(xs, ys, zs, alpha=0.5, c=color_list[i], label=model_list[i])
-#         ax.set_xlabel('First Principal Component')
-#         ax.set_ylabel('Second Principal Component')
-#         ax.set_zlabel('Hyperplane Decision Function')
-#         plt.title('PCA 3D')
-#         ax.legend(bbox_to_anchor=(0.35, 0.9))
-#         plt.show()
+def plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
+    """
+    plots histogram for the decision function produced by SVC
+    @param SVC_dec : 1-d Array - refer to return of get_decision_function
+    @param k_dec   : 1-d Array - refer to return of get_decision_function
+    @param b_dec   : 1-d Array - refer to return of get_decision_function
+    """
+    plt.figure()
+    bins = np.linspace(np.ceil(np.amin(SVC_dec)) - 10, np.ceil(np.amax(SVC_dec)) + 10, 100)
+    plt.hist(k_dec, bins, facecolor=color_list[0], alpha=0.5, label='Kingman')
+    plt.hist(b_dec, bins, facecolor=color_list[1], alpha=0.5, label='Bolthausen-Sznitman')
+    plt.title('Frequency of Decision Function Values: {:d} Executions'.format(n))
+    plt.xlabel('Decision Function Value')
+    plt.ylabel('Frequencies')
+    plt.legend(loc='upper right')
+    plt.show()
 
-########################### Optional : Display Tool ###########################
+def plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
+    """
+    plots ROC Curve
+    @param X_train_scaled : 2-d Array  - refer to return of scale_X
+    @param X_test_scaled  : 2-d Array  - refer to return of scale_X
+    @param y_train        : 1-d Array  - refer to return of preprocess_data
+    @param y_test         : 1-d Array  - refer to return of preprocess_data
+    """
+    lr_clf = LogisticRegression()
+    lr_clf.fit(X_train_scaled, y_train)
+    pred_ROC = lr_clf.predict_proba(X_test_scaled)
+    false_positive_rate, recall, thresholds = metrics.roc_curve(y_test, pred_ROC[:, 1])
+    roc_auc = metrics.auc(false_positive_rate, recall)
 
+    plt.figure()
+    plt.title('Receiver Operating Chraracteristic (ROC) Curve')
+    plt.plot(false_positive_rate, recall, 'b', label='AUC = {:.2f}'.format(roc_auc))
+    plt.legend(loc='lower right')
+    plt.plot([0, 1], [0, 1], 'r--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('Fall-Out')
+    plt.ylabel('Recall')
+    plt.show()
+
+def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comments
+    """
+    performs pca to n_comp number of components and plots the 2-d result
+    @param X_train_raw : 2-d Array - refer to return of preprocess_data
+    @param X_test_raw  : 2-d Array - refer to return of preprocess_data
+    @param y           : 1-d Array - refer to return of preprocess_data
+    @param coef        : Int       - refer to return of define_classifier
+    @param n_comp      : Int       - number of principal components to keep
+    """
+    pca = decomposition.PCA(n_components=1)  # 7 features
+    pca_X = np.zeros_like(X_test_raw)
+    for i in range(len(pca_X)):
+        pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
+    dec_pca = pca.fit_transform(pca_X).ravel()
+
+    plt.figure()
+    for i in range(len(model_list)):
+        xs = SVC_dec[y_test == i]
+        ys = dec_pca[y_test == i]
+        plt.scatter(xs, ys, c=color_list[i], label=model_list[i])
+    plt.title('PCA 2D')
+    plt.legend(loc='upper right')
+    plt.show()
+
+    # optional
+    if three_d:
+        pca = decomposition.PCA(n_components=2)  # 7 features
+        pca_X = np.zeros_like(X_test_raw)
+        for i in range(len(pca_X)):
+            pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
+        dec_pca = pca.fit_transform(pca_X)
+
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.gca(projection='3d')
+        plt.rcParams['legend.fontsize'] = 10
+        for i in range(len(model_list)):
+            xs = dec_pca[:, 0][y_test == i]
+            ys = dec_pca[:, 1][y_test == i]
+            zs = SVC_dec[y_test == i]
+            ax.scatter(xs, ys, zs, alpha=0.5, c=color_list[i], label=model_list[i])
+        ax.set_xlabel('First Principal Component')
+        ax.set_ylabel('Second Principal Component')
+        ax.set_zlabel('Hyperplane Decision Function')
+        plt.title('PCA 3D')
+        ax.legend(bbox_to_anchor=(0.35, 0.9))
+        plt.show()

@@ -2,7 +2,7 @@
 # ========================================= #
 # Display Utils                             #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/28/2017                  #
+# last update : 03/29/2017                  #
 # ========================================= #
 
 from typing import TypeVar, Tuple

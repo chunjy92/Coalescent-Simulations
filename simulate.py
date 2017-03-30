@@ -2,17 +2,17 @@
 # ========================================= #
 # Experiment Simulator                      #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/28/2017                  #
+# last update : 03/29/2017                  #
 # ========================================= #
-
-__author__ = 'Jayeol Chun'
 
 import numpy as np
 from models.structure import Sample
 from utils.display import display_params
 
+__author__ = 'Jayeol Chun'
+
 def run_exeriment(model, sample_size_range,
-                  mu=0.1, mu_step=0.02, iter_num=100, verbose=False):
+                  mu, mu_step, iter_num, verbose=False):
     for sample_size in sample_size_range:
         while mu < 2: # 2 arbitrarily chosen
             display_params((sample_size, mu, iter_num))
