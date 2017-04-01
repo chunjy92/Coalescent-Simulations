@@ -1,7 +1,9 @@
 # Coalescent Simulations
-First Implementation : 2015 ~ 2016 Academic year
+Simulates different coalescents
 
-Current Status : March 2017 ~
+* First Implementation : 2015 ~ 2016 Academic year
+
+* Current Status : March 2017 ~
 
 ## Dependencies
 
@@ -26,3 +28,8 @@ python main.py -t
   * Sample Size: 10
   * Mutation Rate: 0.9
   * Number of Iterations: 1
+
+try:
+```
+python main.py --test --num_iter 500 --sample_size 30
+```

@@ -2,13 +2,19 @@
 # ========================================= #
 # Coalescent Simulations Visualization      #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/29/2017                  #
+# last update : 04/01/2017                  #
 # ========================================= #
 
 import numpy as np
+from sklearn.linear_model.logistic import LogisticRegression
+from sklearn import preprocessing, metrics, decomposition
 import matplotlib.pyplot as plt
 
+from utils.utils import project_onto_plane
+
 __author__ = 'Jayeol Chun'
+
+COLORS = ['magenta', 'cyan']
 
 def goodness_vs_threshold(goodness, bbl):
     """
@@ -23,7 +29,7 @@ def goodness_vs_threshold(goodness, bbl):
     plt.show()
 
 def plot_accurate_thold(sample_size_range, accurate_threshold_bbl, refined_mu,
-                        param_list, model_list, color_list, stat_list):
+                        param_list, model_list, COLORS, stat_list):
     """
     plots various log-scaled versions of sample_size vs mu
     """
@@ -44,7 +50,7 @@ def plot_accurate_thold(sample_size_range, accurate_threshold_bbl, refined_mu,
         plt.show()
 
 def plot_data(result_list, percent_list, sample_size_range, mutation_rate_range,
-              model_list, color_list):
+              model_list, COLORS):
 
     # Result List
     fig = plt.figure(figsize=(10, 8))
@@ -105,28 +111,6 @@ def plot_histogram_each_data(data_k, data_b):
     plt.legend(loc='upper right')
     plt.show()
 
-def display_stats(data_k, data_b, model_list, stat_list):
-    """
-    displays the cumulative statistics of all trees observed for Kingman and Bolthausen-Sznitman
-    @param data_k     : 2-d Array - holds data extracted from Kingman trees
-    @param data_b     : 2-d Array - holds data extracted from Bolthausen-Sznitman trees
-    @param model_list : 1-d Array - provides the names of coalescent models
-    @param stat_list  : 1-d Array - provides description of each statistics examined
-    """
-    k_stats, b_stats = np.zeros((2, m)), np.zeros((2, m))
-    k_stats[0], b_stats[0] = np.mean(data_k, axis=1), np.mean(data_b, axis=1)
-    k_stats[1], b_stats[1] = np.std(data_k, axis=1), np.std(data_b, axis=1)
-    print("\n<<Tree Statistics>> with {:d} Trees Each with Standard Deviation".format(n))
-    for model_name, means, stds in zip(model_list, (k_stats[0], b_stats[0]), (k_stats[1], b_stats[1])):
-        for stat_label, mean, std in zip(stat_list, means, stds):
-            print(model_name, stat_label, ":", mean, ",", std)
-        print()
-    print("<<Kingman vs. Bolthausen-Sznitman>> Side-by-Side Comparison :")
-    for i in range(m):
-        print(stat_list[i], ":\n", k_stats[0][i], " vs.", b_stats[0][i],
-              "\n", k_stats[1][i], "    ", b_stats[1][i])
-    print()
-
 def plot_histogram_each_data(data_k, data_b, num_linspace=30):
     """
     plots histogram for each kind of data collected for each tree
@@ -139,8 +123,8 @@ def plot_histogram_each_data(data_k, data_b, num_linspace=30):
         stat_min, stat_max = np.amin(np.append(data_k[i], data_b[i])), np.amax(np.append(data_k[i], data_b[i]))
         if np.absolute(stat_max-stat_min) >= 100: num_linspace += int(np.sqrt(np.absolute(stat_max-stat_min)))
         bins = np.linspace(np.ceil(stat_min)-1, np.ceil(stat_max)+1, num_linspace)
-        plt.hist(data_k[i], facecolor=color_list[0], bins=bins, lw=1, alpha=0.5, label='Kingman')
-        plt.hist(data_b[i], facecolor=color_list[1], bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
+        plt.hist(data_k[i], facecolor=COLORS[0], bins=bins, lw=1, alpha=0.5, label='Kingman')
+        plt.hist(data_b[i], facecolor=COLORS[1], bins=bins, lw=1, alpha=0.5, label='Bolthausen-Sznitman')
         plt.title(stat_list[i])
         plt.legend(loc='upper right')
         plt.show()
@@ -154,9 +138,9 @@ def plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
     """
     plt.figure()
     bins = np.linspace(np.ceil(np.amin(SVC_dec)) - 10, np.ceil(np.amax(SVC_dec)) + 10, 100)
-    plt.hist(k_dec, bins, facecolor=color_list[0], alpha=0.5, label='Kingman')
-    plt.hist(b_dec, bins, facecolor=color_list[1], alpha=0.5, label='Bolthausen-Sznitman')
-    plt.title('Frequency of Decision Function Values: {:d} Executions'.format(n))
+    plt.hist(k_dec, bins, facecolor='magenta', alpha=0.5, label='Kingman')
+    plt.hist(b_dec, bins, facecolor='cyan', alpha=0.5, label='Bolthausen-Sznitman')
+    plt.title('Frequency of Decision Function Values')
     plt.xlabel('Decision Function Value')
     plt.ylabel('Frequencies')
     plt.legend(loc='upper right')
@@ -187,7 +171,7 @@ def plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
     plt.ylabel('Recall')
     plt.show()
 
-def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comments
+def perform_pca(SVC_dec, X_test_raw, y_test, coef, model_list, three_d=False):
     """
     performs pca to n_comp number of components and plots the 2-d result
     @param X_train_raw : 2-d Array - refer to return of preprocess_data
@@ -199,14 +183,14 @@ def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comme
     pca = decomposition.PCA(n_components=1)  # 7 features
     pca_X = np.zeros_like(X_test_raw)
     for i in range(len(pca_X)):
-        pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
+        pca_X[i] = project_onto_plane(coef, X_test_raw[:][i])
     dec_pca = pca.fit_transform(pca_X).ravel()
 
     plt.figure()
     for i in range(len(model_list)):
         xs = SVC_dec[y_test == i]
         ys = dec_pca[y_test == i]
-        plt.scatter(xs, ys, c=color_list[i], label=model_list[i])
+        plt.scatter(xs, ys, c=COLORS[i], label=model_list[i])
     plt.title('PCA 2D')
     plt.legend(loc='upper right')
     plt.show()
@@ -216,7 +200,7 @@ def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comme
         pca = decomposition.PCA(n_components=2)  # 7 features
         pca_X = np.zeros_like(X_test_raw)
         for i in range(len(pca_X)):
-            pca_X[i] = __project_onto_plane(coef, X_test_raw[:][i])
+            pca_X[i] = project_onto_plane(coef, X_test_raw[:][i])
         dec_pca = pca.fit_transform(pca_X)
 
         fig = plt.figure(figsize=(10, 8))
@@ -226,7 +210,7 @@ def perform_pca(SVC_dec, X_test_raw, y_test, coef, three_d=False):  # edit comme
             xs = dec_pca[:, 0][y_test == i]
             ys = dec_pca[:, 1][y_test == i]
             zs = SVC_dec[y_test == i]
-            ax.scatter(xs, ys, zs, alpha=0.5, c=color_list[i], label=model_list[i])
+            ax.scatter(xs, ys, zs, alpha=0.5, c=COLORS[i], label=model_list[i])
         ax.set_xlabel('First Principal Component')
         ax.set_ylabel('Second Principal Component')
         ax.set_zlabel('Hyperplane Decision Function')
