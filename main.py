@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations Main               #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/01/2017                  #
+# last update : 04/02/2017                  #
 # ========================================= #
 
 # TODO:
@@ -13,6 +13,7 @@
 
 import argparse
 import time
+from multiprocessing import Pool
 from models.models import *
 from utils.display import *
 from utils.plot import *
@@ -95,7 +96,11 @@ def main(sample_size, sample_size_end, sample_size_step,
 
         if num_proc > 1:
             print("\n*** MultiProcessing with {} Processes ***".format(num_proc))
-
+            pool = Pool(processes=num_proc)
+            # res = pool.map(run_exeriment, data)
+            # res = np.array(res).reshape(...)
+            pool.close()
+            pool.join()
         else:
             data = [np.zeros((iter_num, len(STATS))) for _ in range(len(MODELS))]
             for i, model in enumerate(MODELS):

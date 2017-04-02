@@ -2,7 +2,7 @@
 # ========================================= #
 # Models                                    #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/28/2017                  #
+# last update : 04/02/2017                  #
 # ========================================= #
 
 import numpy as np
@@ -15,7 +15,7 @@ __author__ = 'Jayeol Chun'
 T = TypeVar('T', Sample, Ancestor)
 
 class Kingman(Model):
-    def __init__(self, n: int, mu: int, coalescent_list: List[T] = None,
+    def __init__(self, n: int, mu: float, coalescent_list: List[T] = None,
                  data: List[float] = None):  # change data typing
         super().__init__(n, mu)
         self.coalescent_list = coalescent_list
@@ -28,7 +28,7 @@ class Kingman(Model):
         return n * (n - 1) / 2
 
     def coalesce(self, coalescent_list: List[Sample],
-                 data: np.ndarray, verbose=False) -> Ancestor:
+                 data: Tuple[int, np.ndarray], verbose=False) -> Ancestor:
         '''
 
         :param coalescent_list:
@@ -40,7 +40,7 @@ class Kingman(Model):
         self.data = data[1]
         data_idx = data[0]
 
-        generation_time = np.zeros(self.n - 1)  # coalescent time for each generation, fixed: numpy array
+        generation_time = np.zeros(self.n-1)  # coalescent time for each generation, fixed: numpy array
         nth_coalescence = 0  # Starting from 0
 
         # until only the most recent common ancestor remains
@@ -67,11 +67,15 @@ class Kingman(Model):
             "Make sure you are providing at least two Samples for the merging to take place."
         root = coalescent_list.pop()
         root.identity = root.identity.replace('A','K')
+        if verbose:
+            print("Coalescing Complete.")
+            print(generation_time)
+
         return root
 
 
 class BolthausenSznitman(Model):
-    def __init__(self, n: int, mu: int, coalescent_list: List[T]=None,
+    def __init__(self, n: int, mu: float, coalescent_list: List[T]=None,
                  data: List[float]=None):  # change data typing
         super().__init__(n, mu)
         self.coalescent_list = coalescent_list
@@ -94,7 +98,7 @@ class BolthausenSznitman(Model):
         return rate, total_rate
 
     def coalesce(self, coalescent_list: List[Sample],
-                 data: np.ndarray, verbose=False) -> Ancestor:
+                 data: Tuple[int, np.ndarray], verbose=False) -> Ancestor:
         """
         models the Bolthausen-Sznitman coalescence
         @param sample_size     : Int       - refer to argument of src
@@ -130,8 +134,7 @@ class BolthausenSznitman(Model):
 
             if verbose:
                 print("\n*** Merging happened!")
-                print("----> {} was created after merging "
-                      "{} and {}".format(merged_ancestor.identity, children[0].identity, children[1].identity))
+                print("----> {} was created after merging ".format(merged_ancestor.identity) + ', '.join("{}".format(child.identity) for child in children))
                 print("Now, the coalescent list is:")
                 print(coalescent_list)
 
@@ -140,4 +143,7 @@ class BolthausenSznitman(Model):
             "Make sure you are providing at least two Samples for the merging to take place."
         root = coalescent_list.pop()
         root.identity = root.identity.replace('A', 'B')
+        if verbose:
+            print("Coalescing Complete.")
+            print(generation_time)
         return root

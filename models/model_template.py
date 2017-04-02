@@ -2,7 +2,7 @@
 # ========================================= #
 # Model Template                            #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 04/02/2017                  #
 # ========================================= #
 
 import numpy as np
@@ -128,9 +128,9 @@ class Model(ABC):
             if current in self.coalescent_list:
                 del self.coalescent_list[self.coalescent_list.index(current)]
 
-            # Link current child to its left
-            if children_index > 0:
-                current.next = temp_list[children_index-1]
+            # Link current child to its left ->> move to update_ancestor
+            # if children_index > 0:
+            #     current.next = temp_list[children_index-1]
 
             # increase indices
             children_index += 1

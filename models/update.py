@@ -2,7 +2,7 @@
 # ========================================= #
 # Models Update Utils                       #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/28/2017                  #
+# last update : 04/02/2017                  #
 # ========================================= #
 
 from typing import TypeVar, List
@@ -35,6 +35,10 @@ def update_ancestor(ancestor: Ancestor, children_list: List[T]):
     ancestor.big_pivot = ancestor.right.big_pivot
     ancestor.left = ancestor.children_list[0]
 
+    # linked list
+    for i in reversed(range(1, len(children_list))):
+        children_list[i].next = children_list[i-1]
+
 
 def _create_descendent_list(children_list: List[T]) -> List[Sample]:
     """
@@ -51,9 +55,7 @@ def _create_descendent_list(children_list: List[T]) -> List[Sample]:
             # insert the internal node's own descendent list at the node's index in the current descendent_list
             # -> since the node is below the sample, its descdent list must have already been updated
             size = len(descendent_list[i].descendent_list)
-
             descendent_list[i:i] = descendent_list[i].descendent_list
             del descendent_list[i+size]
-
             i += size
     return descendent_list

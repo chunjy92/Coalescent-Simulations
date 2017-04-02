@@ -2,7 +2,7 @@
 # ========================================= #
 # Coalescent Simulations Tree Structure     #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
+# last update : 04/02/2017                  #
 # ========================================= #
 
 __author__ = 'Jayeol Chun'
@@ -26,7 +26,7 @@ class Sample:  # Leaf of Tree
         return 'Sample {} with Mutations {}.'.format(self.identity, self.mutations)
 
     def is_sample(self):
-        return 'A' not in self.identity
+        return all(word not in self.identity for word in ['A', 'K', 'B'])
 
 class Ancestor(Sample):  # Internal Node of Tree, inherits Sample
     def __init__(self, identity_count):
@@ -36,7 +36,6 @@ class Ancestor(Sample):  # Internal Node of Tree, inherits Sample
         super().__init__(identity_count)
         self.identity = 'A{}'.format(identity_count)
         self.generation = identity_count
-        self.height = 0
         self.left = None           # left-most child
         self.right = None          # right-most child
         self.descendent_list = []  # all samples below it

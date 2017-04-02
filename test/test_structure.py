@@ -2,18 +2,17 @@
 # ========================================= #
 # Structure Unittest                        #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/01/2017                  #
+# last update : 04/02/2017                  #
 # ========================================= #
 
 import unittest
 
-from models.structure import *
 from models.update import *
 
 __author__ = 'Jayeol Chun'
 
 
-class MyTestCase(unittest.TestCase):
+class StructureTest(unittest.TestCase):
     def test_structure(self):
         root = Ancestor(10)
         mid_ancestor = Ancestor(9)
@@ -43,6 +42,7 @@ class MyTestCase(unittest.TestCase):
         self.assertListEqual(mid_ancestor.children_list, [low_ancestor_1, low_ancestor_2])
         self.assertListEqual(mid_ancestor.descendent_list, samples) # descendents are only Sample objs
         self.assertGreater(low_ancestor_2.big_pivot, low_ancestor_1.big_pivot) # 5 vs 2
+        self.assertEqual(low_ancestor_2.next, low_ancestor_1)
         self.assertEqual(mid_ancestor.right, low_ancestor_2) # bigger big_pivot becomes right
         self.assertEqual(mid_ancestor.left, low_ancestor_1) # converse
 
@@ -50,8 +50,11 @@ class MyTestCase(unittest.TestCase):
         self.assertListEqual(low_ancestor_1.children_list, low_ancestor_1.descendent_list)
         self.assertEqual(low_ancestor_1.right, sample_2)
         self.assertEqual(low_ancestor_1.left, sample_1)
+        self.assertEqual(sample_2.next, sample_1)
         self.assertListEqual(low_ancestor_2.children_list, low_ancestor_2.descendent_list)
         self.assertEqual(low_ancestor_2.right, sample_5)
+        self.assertEqual(sample_5.next, sample_4)
+        self.assertEqual(sample_4.next, sample_3)
         self.assertEqual(low_ancestor_2.left, sample_3)
 
 if __name__ == '__main__':

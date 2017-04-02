@@ -2,7 +2,7 @@
 # ========================================= #
 # Quicksort UnitTest                        #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/01/2017                  #
+# last update : 04/02/2017                  #
 # ========================================= #
 
 import unittest
@@ -14,7 +14,7 @@ from utils.sorting import quicksort
 __author__ = 'Jayeol Chun'
 
 
-class MyTestCase(unittest.TestCase):
+class QuicksortTest(unittest.TestCase):
     def test_quicksort(self):
         rands = [randint(1, 100) for _ in range(200)]
 
