@@ -2,7 +2,7 @@
 # ========================================= #
 # Models                                    #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/02/2017                  #
+# last update : 04/08/2017                  #
 # ========================================= #
 
 import numpy as np
@@ -27,8 +27,8 @@ class Kingman(Model):
         '''
         return n * (n - 1) / 2
 
-    def coalesce(self, coalescent_list: List[Sample],
-                 data: Tuple[int, np.ndarray], verbose=False) -> Ancestor:
+    def coalesce(self, coalescent_list: List[Sample], data: Tuple[int, np.ndarray],
+                 exp=False, verbose=False) -> Ancestor:
         '''
 
         :param coalescent_list:
@@ -62,9 +62,11 @@ class Kingman(Model):
                 print("Now, the coalescent list is:")
                 print(coalescent_list)
 
-        assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestor, \
-            "There was an error in simulating a Coalescent event." \
-            "Make sure you are providing at least two Samples for the merging to take place."
+            if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
+                if verbose:
+                    print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
+                break
+
         root = coalescent_list.pop()
         root.identity = root.identity.replace('A','K')
         if verbose:
@@ -97,8 +99,8 @@ class BolthausenSznitman(Model):
             total_rate += i_rate
         return rate, total_rate
 
-    def coalesce(self, coalescent_list: List[Sample],
-                 data: Tuple[int, np.ndarray], verbose=False) -> Ancestor:
+    def coalesce(self, coalescent_list: List[Sample], data: Tuple[int, np.ndarray],
+                 exp=False, verbose=False) -> Ancestor:
         """
         models the Bolthausen-Sznitman coalescence
         @param sample_size     : Int       - refer to argument of src
@@ -138,9 +140,11 @@ class BolthausenSznitman(Model):
                 print("Now, the coalescent list is:")
                 print(coalescent_list)
 
-        assert len(coalescent_list) == 1 and type(coalescent_list[0]) is Ancestor, \
-            "There was an error in simulating a Coalescent event." \
-            "Make sure you are providing at least two Samples for the merging to take place."
+            if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
+                if verbose:
+                    print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
+                break
+
         root = coalescent_list.pop()
         root.identity = root.identity.replace('A', 'B')
         if verbose:

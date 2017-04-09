@@ -1,10 +1,6 @@
 # Coalescent Simulations
 Simulates different coalescents
 
-* First Implementation : 2015 ~ 2016 Academic year
-
-* Current Status : March 2017 ~
-
 ## Dependencies
 
 * Python 3.6
@@ -16,20 +12,40 @@ Simulates different coalescents
   * scipy==0.19.0
 
 ## Usage
-1. Model test
-
+Parameters can be customized. For available options:
 ```
-python main.py -t
+python main.py -h
 ```
 
+1. Model Test
+    
+    ```
+    python main.py --test
+    ```
 
 * Produces a single tree for Kingman and Bolthausen-Sznitman
-* Current default setting (currently, not open to user input):
+* Current default setting:
   * Sample Size: 10
   * Mutation Rate: 0.9
   * Number of Iterations: 1
 
-try:
-```
-python main.py --test --num_iter 500 --sample_size 30
-```
+2. Experiment
+* Executes a number of Experiments and records experimental data for analysis 
+* Current default setting:
+    * as above
+    * Number of Process: 1
+    * Number of Experiments: 1
+    1. Single Process (with default params):
+        ```
+        python main.py
+        ```
+    2. Multiprocessing (with default params):
+        ```
+        python main.py --num_proc n
+        ```
+        wtih *n* number of processes
+
+## Timeline
+* First Implementation : 2015 ~ 2016 Academic year
+
+* Current Status : March 2017 ~

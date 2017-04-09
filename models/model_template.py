@@ -2,7 +2,7 @@
 # ========================================= #
 # Model Template                            #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/02/2017                  #
+# last update : 04/08/2017                  #
 # ========================================= #
 
 import numpy as np
@@ -53,8 +53,8 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def coalesce(self, coalescent_list: List[Sample],
-                 data: np.ndarray, verbose=False) -> Ancestor:
+    def coalesce(self, coalescent_list: List[Sample],data: np.ndarray,
+                 exp=False, verbose=False) -> Ancestor:
         pass
 
     # update needed

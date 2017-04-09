@@ -2,18 +2,44 @@
 # ========================================= #
 # Statistics and ML toolkits                #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/01/2017                  #
+# last update : 04/08/2017                  #
 # ========================================= #
 
 import numpy as np
-from sklearn import preprocessing, metrics, decomposition
+from sklearn import preprocessing, metrics
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
+
+from utils.plot import *
 # from sklearn.linear_model.logistic import LogisticRegression
 
 __author__ = 'Jayeol Chun'
 
-# def preprocess_data(k_data, b_data, test_size=0.80):
+def analyze(data):
+    print("\n*** Analyzing Statistics ***\n")
+    # data split by Kingmand and BS cateogry
+    k_data, b_data = data
+    X, y, splits = preprocess(k_data, b_data)  # splits: train, test for each
+
+    X_train, X_test = scale_X(*splits)
+    y_train, y_test = splits[2:]
+
+    # Initialize SVC
+    clf, clf_dec = define_classifier(X_train, X_test, y_train)
+    print("Done.")
+
+    y_pred = clf.predict(X_test)
+    print("\nTest Set Accuracy  :", metrics.accuracy_score(y_test, y_pred))
+
+    print("\nPlotting Decision Function Histogram...")
+    plot_SVC_decision_function_histogram(clf_dec, clf_dec[y_test == 0], clf_dec[y_test == 1])
+    print("Done.")
+
+    print("\nPlotting ROC Curve...")
+    plot_ROC_curve(X_train, X_test, y_train, y_test)
+    print("Done.")
+
+    # perform_pca(clf_dec, X_test, y_test, clf.coef_[0], MODELS, three_d=True)
 
 def preprocess(k_data, b_data, train_size=0.80):
     """

@@ -2,7 +2,7 @@
 # ========================================= #
 # Display Utils                             #
 # author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/01/2017                  #
+# last update : 04/08/2017                  #
 # ========================================= #
 
 from typing import TypeVar, Tuple
@@ -17,7 +17,7 @@ __author__ = 'Jayeol Chun'
 T = TypeVar('T', Sample, Ancestor)
 
 def display_params(args):
-    print("\n****** Running with: ******")
+    print("\n******* Current Simulation Params *******")
     params = ['Sample Size', 'Mutation Rate', 'Number of Iterations']
     for param, arg in zip(params,args):
         print('\t{}: {}'.format(param, arg))
@@ -37,7 +37,7 @@ def display_tree(ancestor: Ancestor, verbose=False):
         print(newick)
         print(tree)
 
-def display_stats(data_k, data_b, model_list, stat_list):
+def display_stats(data, stat_list):
     """
     displays the cumulative statistics of all trees observed for Kingman and Bolthausen-Sznitman
     @param data_k     : 2-d Array - holds data extracted from Kingman trees
@@ -45,21 +45,14 @@ def display_stats(data_k, data_b, model_list, stat_list):
     @param model_list : 1-d Array - provides the names of coalescent models
     @param stat_list  : 1-d Array - provides description of each statistics examined
     """
+    k_data, b_data = data
+    k_mean, k_var = k_data
+    b_mean, b_var = b_data
     m = len(stat_list)
-    k_stats, b_stats = np.zeros((2, m)), np.zeros((2, m))
-    k_stats[0], b_stats[0] = np.mean(data_k, axis=1), np.mean(data_b, axis=1)
-    k_stats[1], b_stats[1] = np.std(data_k, axis=1), np.std(data_b, axis=1)
-    print("\n<<Tree Statistics>> with {:d} Trees Each with Standard Deviation".format(n))
-    for model_name, means, stds in zip(model_list, (k_stats[0], b_stats[0]), (k_stats[1], b_stats[1])):
-        for stat_label, mean, std in zip(stat_list, means, stds):
-            print(model_name, stat_label, ":", mean, ",", std)
-        print()
-    print("<<Kingman vs. Bolthausen-Sznitman>> Side-by-Side Comparison :")
-    for i in range(m):
-        print(stat_list[i], ":\n", k_stats[0][i], " vs.", b_stats[0][i],
-              "\n", k_stats[1][i], "    ", b_stats[1][i])
-    print()
-
+    print("\n<<Kingman vs. Bolthausen-Sznitman Comparison Table>>")
+    # for kd, bd in zip(k_data, b_data):
+    print("\t{}:\t{:.2f} vs {:.2f}".format("AVG", k_mean, b_mean))
+    print("\t{}:\t{:.2f} vs {:.2f}".format("VAR", k_var, b_var))
 
 def _traversal(sample: T) -> str:
     """
