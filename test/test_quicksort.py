@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-                     #
-# ========================================= #
-# Quicksort UnitTest                        #
-# author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/02/2017                  #
-# ========================================= #
+# -*- coding: utf-8 -*-
 
 import unittest
-
 from random import shuffle, randint
-from models.structure import *
-from utils.sorting import quicksort
+from models import Sample
+from models.utils import quicksort
 
 __author__ = 'Jayeol Chun'
 

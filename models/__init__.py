@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-                     #
-# ========================================= #
-# Models Package init                       #
-# author      : Che Yeol (Jayeol) Chun      #
-# last update : 03/27/2017                  #
-# ========================================= #
+from .structure import T, Sample, Ancestor
+from .models import M, MODELS, Kingman, BolthausenSznitman
 
 __author__ = 'Jayeol Chun'

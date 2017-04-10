@@ -1,16 +1,8 @@
-# -*- coding: utf-8 -*-                     #
-# ========================================= #
-# Models UnitTest                           #
-# author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/02/2017                  #
-# ========================================= #
+# -*- coding: utf-8 -*-
 
 import unittest
-
 import numpy as np
-from models.models import *
-from models.structure import *
-from utils.display import display_tree
+from models import Sample, Kingman, BolthausenSznitman
 
 __author__ = 'Jayeol Chun'
 
@@ -82,6 +74,6 @@ class ModelsTest(unittest.TestCase):
 
         # display_tree(root, True)
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     unittest.main()

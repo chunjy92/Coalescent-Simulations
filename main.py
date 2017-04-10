@@ -1,87 +1,75 @@
-# -*- coding: utf-8 -*-                     #
-# ========================================= #
-# Coalescent Simulations Main               #
-# author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/08/2017                  #
-# ========================================= #
+# -*- coding: utf-8 -*-
 
 # TODO:
 # 1. upload to AWS
 # 2. scale up experiments, perform various tests
 # should begin saving the output stats
 
-import time
 import argparse
-from functools import partial
-from multiprocessing import Pool
+import time
 import numpy as np
-
-from models.models import Kingman, BolthausenSznitman
-from analyze import analyze
-from simulate import *
+from models import MODELS
+from simulation import simulate, experiment, analyze
 
 __author__ = 'Jayeol Chun'
 
-# Descriptions
-MODELS = [Kingman, BolthausenSznitman]
 STATS  = ['Bottom Branch Length']
 
 
-def main(sample_size, sample_size_end, sample_size_step, mu, mu_step,
-         num_iter, num_proc, num_test, test=False, verbose=False):
+def main(sample_size: int, sample_size_end: int, sample_size_step: int, mu: float, mu_step: float,
+         num_iter: int, num_proc: int, num_test: int, test: bool=False, graphics: bool=False, verbose: bool=False):
     '''
+    main simulation/experiment script
     experiment mode by default
     '''
 
     tic = time.time()
-    print("\n*** Coalescent Simulations Main ***")
+    print("*** Coalescent Simulations Main ***")
     if test:
         print("*** Testing Mode ***")
-        display_params((sample_size, mu, num_iter))
-
-        # numpy data storage array
         data = [np.zeros((num_iter, len(STATS))) for _ in range(len(MODELS))]
 
         # single simulation
-        res = simulate(MODELS, num_iter, sample_size, mu, data, exp=False, verbose=verbose)
-        print("Test Simulation Done.")
-        display_stats(res, STATS)
-        if num_iter >= 10: analyze(data)
+        simulate(MODELS, num_iter, sample_size, mu, data, exp=False, graphics=graphics, verbose=verbose)
+        if num_iter >= 10: analyze(data, graphics=graphics)
 
     else:
         # comparative studies between models
         print("*** Experiment Mode ***")
+
         if sample_size_end <= sample_size:
             sample_size_end = sample_size + (sample_size_step * 3)+1 # arbitrary, run 3 different choices
-        sample_sizes = range(sample_size, sample_size_end, sample_size_step)
+        sample_sizes = list(range(sample_size, sample_size_end, sample_size_step))
 
         if num_proc > 1:
             print("\n*** Running Experiment with {} Processes ***".format(num_proc))
-            expr_wrapper = partial(experiment, num_test=num_test, mu=mu, mu_step=mu_step,
-                           models=MODELS, num_iter=num_iter, verbose=False) # verbosity will only be confusing
+            from random import shuffle
+            from functools import partial
+            from multiprocessing import Pool
+
+            shuffle(sample_sizes)
+            shuffle(sample_sizes)
+
+            expr_wrapper = partial(experiment, num_test=num_test, mu=mu, mu_step=mu_step, models=MODELS,
+                                   num_iter=num_iter, graphics=graphics, verbose=False)
             with Pool(processes=num_proc) as pool:
                 res = pool.map_async(expr_wrapper, sample_sizes)
                 pool.close()
                 pool.join()
 
-            # $data has all the data in dictionary format
-            # key = (sample_size mu)
-            # val = list of statistics from each simulation
+            # $data has all the data in dictionary
+            # key = (sample_size mu) | val = list of statistics from each simulation
             data = res.get()
-            print("Done.")
-            # print(data)
-
-            # do sth with data...
 
         else:
             print("\n*** Starting a Single Process Experiment ***")
             data = [dict() for _ in range(len(MODELS))]
             for sample_size in sample_sizes:
-                tmp = experiment(sample_size, num_test, mu, mu_step, MODELS, num_iter, verbose=verbose)
+                tmp = experiment(sample_size, num_test, mu, mu_step, MODELS, num_iter,
+                                 graphics=graphics, verbose=verbose)
                 for d, t in zip(data, tmp): d.update(t)
-            print("Done.")
-            print(data)
 
+    print("Done.")
     print("\n*** Program Execution Time: {:.2f} s ***".format(time.time()-tic))
     print("*** Coalescent Simulations Complete ***")
 
@@ -99,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument("-m", "--mu", nargs='?', default=0.9, type=float,
                         help="init mutation rate value, subject to change in experiment. "
                              "The value is final for testing")
-    parser.add_argument("-o", "--mu_step", nargs='?', default=0.5, type=float,
+    parser.add_argument("-o", "--mu_step", nargs='?', default=0.3, type=float,
                         help="mu range step unit for experiment")
     parser.add_argument("-i", "--num_iter", nargs='?', default=300, type=int,
                         help="number of iterations for one experiment or test")
@@ -111,6 +99,8 @@ if __name__ == '__main__':
 
     parser.add_argument("--test", action="store_true",
                         help="test by creating and plotting trees for each model")
+    parser.add_argument("--graphics", action="store_true",
+                        help="produce plots or graphics. Default is no graphics.")
     parser.add_argument("--verbose", action="store_true",
                         help="increase output verbosity")
 
@@ -118,4 +108,4 @@ if __name__ == '__main__':
 
     main(sample_size=args.sample_size, sample_size_end=args.sample_size_end, sample_size_step=args.sample_size_step,
          mu=args.mu, mu_step=args.mu_step, num_iter=args.num_iter, num_proc=args.num_proc, num_test=args.num_tests,
-         test=args.test, verbose=args.verbose)
+         test=args.test, graphics=args.graphics, verbose=args.verbose)

@@ -1,24 +1,17 @@
-# -*- coding: utf-8 -*-                     #
-# ========================================= #
-# Model Template                            #
-# author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/08/2017                  #
-# ========================================= #
+# -*- coding: utf-8 -*-
 
+from typing import List, Tuple
+from abc import ABC, abstractmethod
 import numpy as np
 from scipy.stats import poisson
-from abc import ABC, abstractmethod
-from typing import List, Tuple, Callable, TypeVar
-from utils.sorting import quicksort
-from models.update import *
-from models.structure import *
+from .structure import *
+from .utils import quicksort, update_time, update_ancestor
 
 __author__ = 'Jayeol Chun'
 
-T = TypeVar('T', Sample, Ancestor)
 
 class Model(ABC):
-    def __init__(self, n, mu):
+    def __init__(self, n: int, mu: float):
         '''
         initialize final constants
         :param n: init size of population, i.e. number of init samples or leaves
@@ -57,21 +50,19 @@ class Model(ABC):
                  exp=False, verbose=False) -> Ancestor:
         pass
 
-    # update needed
-    def update_data(self, data_index, *data):
+    def update_data(self, data_index: int, *data: Tuple[int, float]):
         """
         updates the data list
-        @param data_list  : 2-d Array - holds overall data
-        @param data_index : Int       - ensures each data is stored at right place
-        @param data       : Tuple     - (index, value) where the value is to be added to the data_list at the index
+        index ranges from 0 to number of statistics recorded
         """
         for index, value in data:
             self.data[data_index][index] += value
 
 
-    def merge(self, merge_identity, num_children=2):
+    def merge(self, merge_identity: int, num_children: int=2) -> Tuple[Ancestor, List[T]]:
         '''
-        Perform a coalescent event that creates a merged ancestor
+        performs a coalescent event that creates a merged ancestor
+        -> returns the new ancestor and its children list
         '''
 
         # Create an Internal Node Representing a Coalescent Event
@@ -86,16 +77,15 @@ class Model(ABC):
         return merged_ancestor, children
 
 
-    def update_children(self, ancestor, children, gen_time, data_index, verbose=False):
+    def update_children(self, ancestor: Ancestor, children: List[T],
+                        gen_time: np.ndarray, data_index: int, verbose: bool=False):
         '''
-        For each child node under ancestor, calculate time and mutation value
-        Then, update accordingly
+        for each child node under ancestor, calculate time and mutation value
+        -> then, update accordingly
         '''
-
         temp_list = children[:]
         children_index = 0  # index of changing children_list
 
-        ##########################################################################################
         # BEGIN: iteration through the children_list
         while children_index < np.size(temp_list):
             current = temp_list[children_index]  # current child under inspection
@@ -128,14 +118,7 @@ class Model(ABC):
             if current in self.coalescent_list:
                 del self.coalescent_list[self.coalescent_list.index(current)]
 
-            # Link current child to its left ->> move to update_ancestor
-            # if children_index > 0:
-            #     current.next = temp_list[children_index-1]
-
-            # increase indices
             children_index += 1
-        # END: iteration through the children_list
-        ##########################################################################################
 
         # Update new information to the ancestor
         update_ancestor(ancestor, temp_list)

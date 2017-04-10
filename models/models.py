@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-                     #
-# ========================================= #
-# Models                                    #
-# author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/08/2017                  #
-# ========================================= #
+# -*- coding: utf-8 -*-
 
 import numpy as np
-from typing import TypeVar, List, Tuple
-from models.structure import *
-from models.model_template import Model
+from typing import List, Tuple
+from .model_template import Model
+from .structure import *
 
 __author__ = 'Jayeol Chun'
 
-T = TypeVar('T', Sample, Ancestor)
 
 class Kingman(Model):
     def __init__(self, n: int, mu: float, coalescent_list: List[T] = None,
-                 data: List[float] = None):  # change data typing
+                 data: List[float] = None):
         super().__init__(n, mu)
         self.coalescent_list = coalescent_list
         self.data = data
@@ -28,20 +22,19 @@ class Kingman(Model):
         return n * (n - 1) / 2
 
     def coalesce(self, coalescent_list: List[Sample], data: Tuple[int, np.ndarray],
-                 exp=False, verbose=False) -> Ancestor:
+                 exp: bool=False, verbose: bool=False) -> Ancestor:
         '''
-
-        :param coalescent_list:
-        :param data:
-        :param verbose:
-        :return:
+        models Kingman coalescence
         '''
-        self.coalescent_list = coalescent_list  # for this particular run
+        self.coalescent_list = coalescent_list
         self.data = data[1]
         data_idx = data[0]
 
         generation_time = np.zeros(self.n-1)  # coalescent time for each generation, fixed: numpy array
-        nth_coalescence = 0  # Starting from 0
+        nth_coalescence = 0
+
+        if verbose:
+            print("Kingman Coalescent Begin")
 
         # until only the most recent common ancestor remains
         while len(coalescent_list) > 1:
@@ -59,8 +52,8 @@ class Kingman(Model):
                 print("\n*** Merging happened!")
                 print("----> {} was created after merging "
                       "{} and {}".format(merged_ancestor.identity, children[0].identity, children[1].identity))
-                print("Now, the coalescent list is:")
-                print(coalescent_list)
+                # print("Now, the coalescent list is:")
+                # print(coalescent_list)
 
             if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
                 if verbose:
@@ -71,14 +64,13 @@ class Kingman(Model):
         root.identity = root.identity.replace('A','K')
         if verbose:
             print("Coalescing Complete.")
-            print(generation_time)
-
+            # print(generation_time)
         return root
 
 
 class BolthausenSznitman(Model):
     def __init__(self, n: int, mu: float, coalescent_list: List[T]=None,
-                 data: List[float]=None):  # change data typing
+                 data: List[float]=None):
         super().__init__(n, mu)
         self.coalescent_list = coalescent_list
         self.data = data
@@ -86,10 +78,6 @@ class BolthausenSznitman(Model):
     def F(self, n: int, rate: np.ndarray=None) -> Tuple[np.ndarray, float]:
         """
         Bolthausen-Sznitman function
-        @param mn_rate : 1-d Array -
-        @param n       : Int       - current size of the coalescent list, i.e. number of samples available for coalescence
-        @return        : Tuple     - ( mn_rate    : 1-d Array -
-                                       total_rate : 1-d Array - holds each i rate )
         """
         total_rate = 0
         for i in range(n - 1):
@@ -100,21 +88,19 @@ class BolthausenSznitman(Model):
         return rate, total_rate
 
     def coalesce(self, coalescent_list: List[Sample], data: Tuple[int, np.ndarray],
-                 exp=False, verbose=False) -> Ancestor:
+                 exp: bool=False, verbose: bool=False) -> Ancestor:
         """
         models the Bolthausen-Sznitman coalescence
-        @param sample_size     : Int       - refer to argument of src
-        @param mu              : Float     - refer to argument of src
-        @param coalescent_list : 1-d Array - holds samples
-        @param data            : Tuple     - (data_list, data_index) -> refer to __update_data
-        @param newick          : Bool      - refer to argument of src
         """
-        self.coalescent_list = coalescent_list  # for this particular run
+        self.coalescent_list = coalescent_list
         self.data = data[1]
         data_idx = data[0]
 
         generation_time = np.zeros(self.n - 1)  # coalescent time for each generation, fixed: numpy array
-        nth_coalescence = 0  # Starting from 0
+        nth_coalescence = 0
+
+        if verbose:
+            print("BS Coalescent Begin")
 
         # until only the most recent common ancestor remains
         while len(coalescent_list) > 1:
@@ -132,13 +118,14 @@ class BolthausenSznitman(Model):
             # merge children
             merged_ancestor, children = self.merge(nth_coalescence, num_children)
 
+            # update these children
             self.update_children(merged_ancestor, children, generation_time, data_idx)
 
             if verbose:
                 print("\n*** Merging happened!")
                 print("----> {} was created after merging ".format(merged_ancestor.identity) + ', '.join("{}".format(child.identity) for child in children))
-                print("Now, the coalescent list is:")
-                print(coalescent_list)
+                # print("Now, the coalescent list is:")
+                # print(coalescent_list)
 
             if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
                 if verbose:
@@ -149,5 +136,8 @@ class BolthausenSznitman(Model):
         root.identity = root.identity.replace('A', 'B')
         if verbose:
             print("Coalescing Complete.")
-            print(generation_time)
+            # print(generation_time)
         return root
+
+M = TypeVar('M', Kingman, BolthausenSznitman)
+MODELS = [Kingman, BolthausenSznitman]

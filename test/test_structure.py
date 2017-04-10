@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-                     #
-# ========================================= #
-# Structure Unittest                        #
-# author      : Che Yeol (Jayeol) Chun      #
-# last update : 04/02/2017                  #
-# ========================================= #
+# -*- coding: utf-8 -*-
 
 import unittest
-
-from models.update import *
+from models import Sample, Ancestor
+from models.utils import update_ancestor
 
 __author__ = 'Jayeol Chun'
 
@@ -56,6 +51,7 @@ class StructureTest(unittest.TestCase):
         self.assertEqual(sample_5.next, sample_4)
         self.assertEqual(sample_4.next, sample_3)
         self.assertEqual(low_ancestor_2.left, sample_3)
+
 
 if __name__ == '__main__':
     unittest.main()
