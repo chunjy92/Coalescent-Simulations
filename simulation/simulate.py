@@ -8,21 +8,21 @@ from .utils import display_params, display_stats, display_tree
 __author__ = 'Jayeol Chun'
 
 
-def experiment(sample_size: int, num_test: int, mu: float, mu_step: float, models: M, num_iter: int,
-               graphics: bool=False, verbose: bool=False):
+def experiment(sample_size: int, num_test: int, mu: float, mu_thold: float, models: M, 
+               num_iter: int, graphics: bool=False, verbose: bool=False):
     '''
     single experiment handled by one process
     i.e. executes $simulate method $test_range number of times
     and stores the summary statistics for each simulation: avg and variance.
     -- mix and match various combinations of sample size and mutation rate
     '''
-    init_mu = mu
+    init_mu, mu_step = mu, 0.03
     data = [dict() for _ in range(len(models))]
     for test_index in range(num_test):
         print("\n******* {}th Test Iteration out of {} *******".format(test_index + 1, num_test), end='')
         sim_data = [np.zeros((num_iter, 1)) for _ in range(len(models))]
         mu = init_mu
-        while mu < 2.0:  # 2.0 arbitrarily set for now
+        while mu < mu_thold:  # 2.0 arbitrarily set for now
             display_params((sample_size, mu, num_iter))
             res = simulate(models, num_iter, sample_size, mu, sim_data,
                            exp=True, graphics=graphics, verbose=verbose)

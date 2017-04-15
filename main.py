@@ -16,7 +16,7 @@ __author__ = 'Jayeol Chun'
 STATS  = ['Bottom Branch Length']
 
 
-def main(sample_size: int, sample_size_end: int, sample_size_step: int, mu: float, mu_step: float,
+def main(sample_size: int, sample_size_end: int, sample_size_step: int, mu: float, mu_thold: float,
          num_iter: int, num_proc: int, num_test: int, test: bool=False, graphics: bool=False, verbose: bool=False):
     '''
     main simulation/experiment script
@@ -48,9 +48,8 @@ def main(sample_size: int, sample_size_end: int, sample_size_step: int, mu: floa
             from multiprocessing import Pool
 
             shuffle(sample_sizes)
-            shuffle(sample_sizes)
 
-            expr_wrapper = partial(experiment, num_test=num_test, mu=mu, mu_step=mu_step, models=MODELS,
+            expr_wrapper = partial(experiment, num_test=num_test, mu=mu, mu_thold=mu_thold, models=MODELS,
                                    num_iter=num_iter, graphics=graphics, verbose=False)
             with Pool(processes=num_proc) as pool:
                 res = pool.map_async(expr_wrapper, sample_sizes)
@@ -60,12 +59,13 @@ def main(sample_size: int, sample_size_end: int, sample_size_step: int, mu: floa
             # $data has all the data in dictionary
             # key = (sample_size mu) | val = list of statistics from each simulation
             data = res.get()
+            print(data)
 
         else:
             print("\n*** Starting a Single Process Experiment ***")
             data = [dict() for _ in range(len(MODELS))]
             for sample_size in sample_sizes:
-                tmp = experiment(sample_size, num_test, mu, mu_step, MODELS, num_iter,
+                tmp = experiment(sample_size, num_test, mu, mu_thold, MODELS, num_iter,
                                  graphics=graphics, verbose=verbose)
                 for d, t in zip(data, tmp): d.update(t)
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument("-m", "--mu", nargs='?', default=0.9, type=float,
                         help="init mutation rate value, subject to change in experiment. "
                              "The value is final for testing")
-    parser.add_argument("-o", "--mu_step", nargs='?', default=0.3, type=float,
+    parser.add_argument("-o", "--mu_threshold", dest="mu_thold", nargs='?', default=2.0, type=float,
                         help="mu range step unit for experiment")
     parser.add_argument("-i", "--num_iter", nargs='?', default=300, type=int,
                         help="number of iterations for one experiment or test")
@@ -107,5 +107,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(sample_size=args.sample_size, sample_size_end=args.sample_size_end, sample_size_step=args.sample_size_step,
-         mu=args.mu, mu_step=args.mu_step, num_iter=args.num_iter, num_proc=args.num_proc, num_test=args.num_tests,
+         mu=args.mu, mu_thold=args.mu_thold, num_iter=args.num_iter, num_proc=args.num_proc, num_test=args.num_tests,
          test=args.test, graphics=args.graphics, verbose=args.verbose)
