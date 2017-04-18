@@ -48,16 +48,16 @@ class Kingman(Model):
             # update these children
             self.update_children(merged_ancestor, children, generation_time, data_idx)
 
-            if verbose:
-                print("\n*** Merging happened!")
-                print("----> {} was created after merging "
-                      "{} and {}".format(merged_ancestor.identity, children[0].identity, children[1].identity))
+            # if verbose:
+            #     print("\n*** Merging happened!")
+            #     print("----> {} was created after merging "
+            #           "{} and {}".format(merged_ancestor.identity, children[0].identity, children[1].identity))
                 # print("Now, the coalescent list is:")
                 # print(coalescent_list)
 
             if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
-                if verbose:
-                    print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
+                # if verbose:
+                #     print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
                 break
 
         root = coalescent_list.pop()
@@ -121,15 +121,15 @@ class BolthausenSznitman(Model):
             # update these children
             self.update_children(merged_ancestor, children, generation_time, data_idx)
 
-            if verbose:
-                print("\n*** Merging happened!")
-                print("----> {} was created after merging ".format(merged_ancestor.identity) + ', '.join("{}".format(child.identity) for child in children))
+            # if verbose:
+            #     print("\n*** Merging happened!")
+            #     print("----> {} was created after merging ".format(merged_ancestor.identity) + ', '.join("{}".format(child.identity) for child in children))
                 # print("Now, the coalescent list is:")
                 # print(coalescent_list)
 
             if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
-                if verbose:
-                    print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
+                # if verbose:
+                #     print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
                 break
 
         root = coalescent_list.pop()

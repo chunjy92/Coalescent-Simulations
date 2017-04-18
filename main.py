@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # TODO:
-# 1. upload to AWS
-# 2. scale up experiments, perform various tests
-# should begin saving the output stats
+# 1. smart increase of mutation rate
+# 2. upload to AWS and save trees (+ stats)
 
 import argparse
 import time
@@ -31,7 +30,7 @@ def main(sample_size: int, sample_size_end: int, sample_size_step: int, mu: floa
 
         # single simulation
         simulate(MODELS, num_iter, sample_size, mu, data, exp=False, graphics=graphics, verbose=verbose)
-        if num_iter >= 10: analyze(data, graphics=graphics)
+        if num_iter>=10: analyze(data, graphics=graphics)
 
     else:
         # comparative studies between models
@@ -87,7 +86,7 @@ if __name__ == '__main__':
     parser.add_argument("-m", "--mu", nargs='?', default=0.9, type=float,
                         help="init mutation rate value, subject to change in experiment. "
                              "The value is final for testing")
-    parser.add_argument("-o", "--mu_threshold", dest="mu_thold", nargs='?', default=2.0, type=float,
+    parser.add_argument("-o", "--mu_threshold", dest="mu_thold", nargs='?', default=5.0, type=float,
                         help="mu range step unit for experiment")
     parser.add_argument("-i", "--num_iter", nargs='?', default=300, type=int,
                         help="number of iterations for one experiment or test")

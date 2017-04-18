@@ -25,7 +25,10 @@ def display_params(args):
     print("\n******* Current Simulation Params *******")
     params = ['Sample Size', 'Mutation Rate', 'Number of Iterations']
     for param, arg in zip(params,args):
-        print('\t{}: {}'.format(param, arg))
+        if type(arg) is int:
+            print('\t{}: {}'.format(param, arg))
+        else:
+            print('\t{}: {:.3f}'.format(param, arg))
 
 
 def display_stats(data):
