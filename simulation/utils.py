@@ -23,23 +23,18 @@ def display_params(args):
     displays the simulation's parameber values
     """
     print("\n******* Current Simulation Params *******")
-    params = ['Sample Size', 'Mutation Rate', 'Number of Iterations']
-    for param, arg in zip(params,args):
-        if type(arg) is int:
-            print('\t{}: {}'.format(param, arg))
-        else:
-            print('\t{}: {:.3f}'.format(param, arg))
+    print('\tSample Size: {}'.format(args[0]))
+    print('\tMutation Rate: {:.3f}'.format(args[1]))
 
 
 def display_stats(data):
     """
     displays the cumulative statistics of all trees observed for the models
     """
-    k_mean, k_var = data[0]
-    b_mean, b_var = data[1]
-    print("\n<<Kingman vs. Bolthausen-Sznitman Comparison Table>>")
-    print("\t{}:\t{:.2f} vs {:.2f}".format("AVG", k_mean, b_mean))
-    print("\t{}:\t{:.2f} vs {:.2f}".format("VAR", k_var, b_var))
+    k, b = data
+    print("\n<< Kingman vs. Bolthausen-Sznitman Stats >>")
+    print("\t{}:\t{:.2f} vs {:.2f}".format("AVG", np.mean(k), np.mean(b)))
+    print("\t{}:\t{:.2f} vs {:.2f}".format("VAR", np.var(k), np.var(b)))
 
 
 def display_tree(root: T, verbose=False):
@@ -79,7 +74,8 @@ def _recur_traversal(output: str, sample: T) -> str:
     recursively travels to the sample's (right) leaves
     """
     if sample.is_sample():
-        output = output + str(sample.identity) + ':' + str(sample.mutations)
+        # output = output + str(sample.identity) + ':' + str(sample.mutations)
+        output = output + str(sample.identity) + ':' + str(sample.time)
         return output
     current = sample.right
     output = _recur_traversal((output + '('), current)
@@ -88,5 +84,6 @@ def _recur_traversal(output: str, sample: T) -> str:
         output = _recur_traversal(output + ', ', current)
     current = sample.left
     output = _recur_traversal((output + ', '), current)
-    output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
+    # output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
+    output = output + ')' + str(sample.identity) + ':' + str(sample.time)
     return output

@@ -6,12 +6,13 @@ from sklearn import preprocessing, metrics
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from .plot import plot_ROC_curve, plot_SVC_decision_function_histogram
+from .utils import display_stats
 
 __author__ = 'Jayeol Chun'
 
 
 def analyze(data: List[np.ndarray], graphics=False):
-    print("\n*** Analyzing Statistics ***\n")
+    if graphics: display_stats(data)
     # data split by Kingman and BS cateogry
     k_data, b_data = data
     X, y, splits = preprocess(k_data, b_data)  # splits: train, test for each
@@ -23,19 +24,17 @@ def analyze(data: List[np.ndarray], graphics=False):
     clf, clf_dec = define_classifier(X_train, X_test, y_train)
     print("Done.")
 
-    y_pred = clf.predict(X_test)
-    print("\nTest Set Accuracy  :", metrics.accuracy_score(y_test, y_pred))
-
     if graphics:
         print("\nPlotting Decision Function Histogram...")
         plot_SVC_decision_function_histogram(clf_dec, clf_dec[y_test == 0], clf_dec[y_test == 1])
         print("Done.")
 
-    if graphics:
         print("\nPlotting ROC Curve...")
         plot_ROC_curve(X_train, X_test, y_train, y_test)
         print("Done.")
 
+    y_pred = clf.predict(X_test)
+    print("\nTest Set Accuracy: {:.2f}%".format(metrics.accuracy_score(y_test, y_pred) * 100))
     # perform_pca(clf_dec, X_test, y_test, clf.coef_[0], MODELS, three_d=True)
 
 def preprocess(k_data: np.ndarray, b_data: np.ndarray, train_size=0.80):
@@ -80,7 +79,7 @@ def define_classifier(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarr
                                           coef      : Tuple      - linear coefficients of the separating hyperplane
                                           intercept : Int        - intercept of the hyperplane )
     """
-    print("Initializing {} SVC classifier ***".format(kernel))
+    print("\nInitializing {} SVC classifier...".format(kernel))
     clf = SVC(kernel=kernel)
     clf.fit(X_train, y_train)
     return clf, clf.decision_function(X_test)
@@ -102,16 +101,16 @@ def define_classifier(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarr
 #     # return SVC_dec, k_dec, b_dec
 #     return dec
 
-def test_accuracy(clf: SVC, X_test_scaled: np.ndarray, y_test: np.ndarray):
-    """
-    tests the accuracy of the classifier, using the test data
-    @param clf            : Classifier - refer to return of define_classifier
-    @param X_train_scaled : 2-d Array  - refer to return of scale_X
-    @param y_train        : 1-d Array  - refer to return of preprocess_data
-    @param X_test_scaled  : 2-d Array  - refer to return of scale_X
-    @param y_test         : 1-d Array  - refer to return of preprocess_data
-    """
-    # y_train_pred = clf.predict(X_train_scaled)
-    # print("Train Set Accuracy :", metrics.accuracy_score(y_train, y_train_pred))
-    y_pred = clf.predict(X_test_scaled)
-    print("Test Set Accuracy  :", metrics.accuracy_score(y_test, y_pred))
+# def test_accuracy(clf: SVC, X_test_scaled: np.ndarray, y_test: np.ndarray):
+#     """
+#     tests the accuracy of the classifier, using the test data
+#     @param clf            : Classifier - refer to return of define_classifier
+#     @param X_train_scaled : 2-d Array  - refer to return of scale_X
+#     @param y_train        : 1-d Array  - refer to return of preprocess_data
+#     @param X_test_scaled  : 2-d Array  - refer to return of scale_X
+#     @param y_test         : 1-d Array  - refer to return of preprocess_data
+#     """
+#     # y_train_pred = clf.predict(X_train_scaled)
+#     # print("Train Set Accuracy :", metrics.accuracy_score(y_train, y_train_pred))
+#     y_pred = clf.predict(X_test_scaled)
+#     print("Test Set Accuracy  :", metrics.accuracy_score(y_test, y_pred))

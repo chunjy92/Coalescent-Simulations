@@ -54,21 +54,25 @@ def experiment(sample_size: int, num_test: int, mu: float, mu_thold: float, mode
 
 
 def simulate(models: M, num_iter: int, sample_size: int, mu: float, data: List[np.ndarray],
-             exp: bool=False, graphics: bool=False, verbose: bool=False):
+             tree_dir:str=None, exp: bool=False, graphics: bool=False, verbose: bool=False):
     '''
     single simulation
     i.e. produces $num_iter many trees for each model
     and stores each statistics in to $data
     Returns some statistics, may change in the future
     '''
+    # a_path = "/Users/jayeolchun/Documents/Research/Coalescent-Simulations/data"
     for i, model in enumerate(models):
         model = model(sample_size, mu)
         for iter in range(num_iter):
-            coalescent_list = [Sample(s + 1) for s in range(sample_size)]
+            coalescent_list = [Sample(s+1) for s in range(sample_size)]
             root = model.coalesce(coalescent_list, (iter, data[i]), exp=exp, verbose=verbose)
+            model.store_tree(root)
             if num_iter < 5 and graphics: display_tree(root, verbose=verbose)
+        print(model.time_trees)
+        model.save_trees(tree_dir)
     res = [(np.average(l), np.var(l)) for l in data]
-    if graphics: display_stats(res)
+
     return res
 
 
@@ -118,11 +122,11 @@ def get_threshold(data, verbose=False):
             max_goodness = goodness
             threshold_idx = index
             try:
-                threshold_bbl = (res[0] + sorted_result[index+1, 0]) / 2
+                threshold_bbl = (res[0]+sorted_result[index+1, 0]) / 2
             except IndexError:
                 threshold_bbl = res[0]
 
     pred_label = np.concatenate([np.zeros(threshold_idx+1), np.ones(total_size-(threshold_idx+1))])
-    sum_correct = np.sum(pred_label == sorted_result[:,1])
+    sum_correct = np.sum(pred_label==sorted_result[:,1])
     percent_correct = sum_correct / total_size
     return threshold_bbl, percent_correct

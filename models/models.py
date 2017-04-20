@@ -30,13 +30,16 @@ class Kingman(Model):
         self.data = data[1]
         data_idx = data[0]
 
-        generation_time = np.zeros(self.n-1)  # coalescent time for each generation, fixed: numpy array
+        # generation_time = np.zeros(self.n-1)  # coalescent time for each generation, fixed: numpy array
+        generation_time = np.zeros(self.n-1)
         nth_coalescence = 0
 
         if verbose:
             print("Kingman Coalescent Begin")
 
         # until only the most recent common ancestor remains
+        # print(self.coalescent_list)
+        # print(len(generation_time))
         while len(coalescent_list) > 1:
             # calculate time
             generation_time[nth_coalescence] = np.random.exponential(1 / self.F(len(coalescent_list)))
@@ -55,10 +58,10 @@ class Kingman(Model):
                 # print("Now, the coalescent list is:")
                 # print(coalescent_list)
 
-            if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
-                # if verbose:
-                #     print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
-                break
+            # if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
+            #     # if verbose:
+            #     #     print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
+            #     break
 
         root = coalescent_list.pop()
         root.identity = root.identity.replace('A','K')
@@ -127,10 +130,10 @@ class BolthausenSznitman(Model):
                 # print("Now, the coalescent list is:")
                 # print(coalescent_list)
 
-            if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
-                # if verbose:
-                #     print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
-                break
+            # if exp and all(isinstance(s, Ancestor) for s in coalescent_list):
+            #     # if verbose:
+            #     #     print("Experiment enabled. No need to simulate with only Ancestors on the coalescent list.")
+            #     break
 
         root = coalescent_list.pop()
         root.identity = root.identity.replace('A', 'B')

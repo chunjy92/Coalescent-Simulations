@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import os
 from typing import List, Tuple
 from abc import ABC, abstractmethod
+import pickle
 import numpy as np
 from scipy.stats import poisson
 from .structure import *
@@ -9,6 +11,7 @@ from .utils import quicksort, update_time, update_ancestor
 
 __author__ = 'Jayeol Chun'
 
+TREE = ".tree"
 
 class Model(ABC):
     def __init__(self, n: int, mu: float):
@@ -21,6 +24,25 @@ class Model(ABC):
         self.mu = mu
         self._data = []
         self._coalescent_list = []
+        self._time_trees = []
+
+    @property
+    def time_trees(self):
+        return self._time_trees
+
+    def save_trees(self, path):
+        assert len(self._time_trees)>0, "There are no trees to save to file."
+        folder = os.path.join(path, self.identity)
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        # filepath = os.path.join(path, self.identity, str(self.n)+TREE)
+        filepath = os.path.join(folder, str(self.n)+TREE)
+        with open(filepath, 'wb') as f:
+            pickle.dump(self._time_trees, f)
+
+    def store_tree(self, root):
+        self._time_trees.append(root)
+        self.identity = root.identity[0]
 
     @property
     def coalescent_list(self):
@@ -91,30 +113,33 @@ class Model(ABC):
             current = temp_list[children_index]  # current child under inspection
 
             update_time(current, ancestor, gen_time)
-            current.mutations = poisson.rvs(self.mu*current.time)
 
-            # First Case : a Sample (Leaf Node)
-            if current.is_sample():
-                self.update_data(data_index, (0, current.mutations)) # 0, when only considering bottom branch length
+            # not for saving trees..
 
-            # Second Case : an Internal Node with Mutations == 0
-            elif current.mutations==0:
-                # Delete this Current Child from the Coalescent List
-                del self.coalescent_list[self.coalescent_list.index(current)]
-
-                # Replace this Current Child with its children nodes
-                del temp_list[children_index]
-                temp_list[children_index:children_index] = current.children_list
-
-                # Create Linked List that Connects the Replacing children_list with the original children
-                # on its left if it exists
-                if children_index > 0:
-                    temp_list[children_index].next = temp_list[children_index-1]
-                # Increase the index appropriately by jumping over the current child's children
-                children_index += len(current.children_list)-1
+            # current.mutations = poisson.rvs(self.mu*current.time)
+            #
+            # # First Case : a Sample (Leaf Node)
+            # if current.is_sample():
+            #     self.update_data(data_index, (0, current.mutations)) # 0, when only considering bottom branch length
+            #
+            # # Second Case : an Internal Node with Mutations == 0
+            # elif current.mutations==0:
+            #     # Delete this Current Child from the Coalescent List
+            #     del self.coalescent_list[self.coalescent_list.index(current)]
+            #
+            #     # Replace this Current Child with its children nodes
+            #     del temp_list[children_index]
+            #     temp_list[children_index:children_index] = current.children_list
+            #
+            #     # Create Linked List that Connects the Replacing children_list with the original children
+            #     # on its left if it exists
+            #     if children_index > 0:
+            #         temp_list[children_index].next = temp_list[children_index-1]
+            #     # Increase the index appropriately by jumping over the current child's children
+            #     children_index += len(current.children_list)-1
 
             # Delete Current Child from the Coalescent List (unless Deleted alrdy in the Second Case)
-            current = temp_list[children_index]
+            # current = temp_list[children_index]
             if current in self.coalescent_list:
                 del self.coalescent_list[self.coalescent_list.index(current)]
 

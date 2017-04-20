@@ -3,7 +3,7 @@ Simulates different coalescents
 
 ## Dependencies
 
-* Python 3.6
+* Python 3.6.0
 * Requirements:
   * biopython==1.68
   * matplotlib==2.0.0
@@ -26,18 +26,17 @@ python main.py -h
 * Produces a single tree for Kingman and Bolthausen-Sznitman
 * Enable graphics output with `--graphics`
 * Current default setting:
-  * Sample Size: 10
-  * Mutation Rate: 0.9
+  * Sample Size: 15
+  * Mutation Rate: 0.5
   * Number of Iterations: 300
 
 2. **Experiment**
 * Executes a number of Experiments and records experimental data for analysis 
 * Current default setting:
-    * Sample Size Range: (5, 10, 5)
-    * Init Mutation Rate: 0.9
-    * Mutation Rate Step: 0.3
+    * Sample Size Range: (15, 25, 3)
+    * Init Mutation Rate: 0.5
     * Number of Process: 1
-    * Number of Experiments: 3
+    * Number of Experiments: 1
     1. Single Process (with default params):
         ```
         python main.py
