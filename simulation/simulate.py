@@ -3,7 +3,7 @@
 from typing import List
 import numpy as np
 from models import M, Sample
-from .utils import display_params, display_stats, display_tree
+from .utils import display_params, display_stats
 
 __author__ = 'Jayeol Chun'
 
@@ -53,7 +53,34 @@ def experiment(sample_size: int, num_test: int, mu: float, mu_thold: float, mode
     return data
 
 
-def simulate(models: M, num_iter: int, sample_size: int, mu: float, data: List[np.ndarray],
+def simulate(sample_size, model, num_iter, verbose=False):
+    # data = [np.zeros((num_iter, len(STATS))) for _ in range(len(MODELS))]
+    # for sample_size in self.sample_sizes:
+    #     key = str(sample_size)
+    #     for iter in range(self.num_iter):
+    #         coalescent_list = [Sample(s+1) for s in range(sample_size)]
+    #         root = self._coalesce(coalescent_list, sample_size, verbose=verbose)
+    #         self._store_tree(root, key)
+    #         display_tree(root)
+
+    # key = str(sample_size)
+    # key = sample_si
+    # print("Simjulating with", str(key))
+    time_trees = {}
+    for _ in range(num_iter):
+        coalescent_list = [Sample(s+1) for s in range(sample_size)]
+        root = model.coalesce(coalescent_list, sample_size, verbose=verbose)
+        # model.store_tree(root, key)
+        if sample_size in time_trees:
+            time_trees[sample_size].append(root)
+        else:
+            time_trees[sample_size] = [root]
+
+    print("Ended with {}, root identity -> {}".format(str(sample_size), root.identity))
+    return time_trees
+
+
+def _simulate(models: M, num_iter: int, sample_size: int, mu: float, data: List[np.ndarray],
              tree_dir:str=None, exp: bool=False, graphics: bool=False, verbose: bool=False):
     '''
     single simulation
@@ -68,7 +95,7 @@ def simulate(models: M, num_iter: int, sample_size: int, mu: float, data: List[n
             coalescent_list = [Sample(s+1) for s in range(sample_size)]
             root = model.coalesce(coalescent_list, (iter, data[i]), exp=exp, verbose=verbose)
             model.store_tree(root)
-            if num_iter < 5 and graphics: display_tree(root, verbose=verbose)
+            # if num_iter < 5 and graphics: display_tree(root, verbose=verbose)
         print(model.time_trees)
         model.save_trees(tree_dir)
     res = [(np.average(l), np.var(l)) for l in data]

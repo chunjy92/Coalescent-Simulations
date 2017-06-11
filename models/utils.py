@@ -1,13 +1,28 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from scipy.stats import poisson
 from typing import List
-from .structure import *
+from .structure import Sample, Ancestor, T
 
 __author__ = 'Jayeol Chun'
 
 
-def update_time(sample: Ancestor, ancestor: Ancestor, gen_time: np.ndarray):
+def update_children(ancestor: Ancestor, children: List[T],
+                    gen_time: np.ndarray, verbose: bool = False):
+    '''
+    for each child node under ancestor, calculate time and mutation value
+    '''
+    # BEGIN: iteration through the children_list
+    for child in children:
+        _update_time(child, ancestor, gen_time)
+        # child.mutations = poisson.rvs(self.mu * child.time)
+
+    # Update new information to the ancestor
+    _update_ancestor(ancestor, children)
+
+
+def _update_time(sample: T, ancestor: Ancestor, gen_time: np.ndarray):
     """
     adds up the between-generation time
     """
@@ -15,7 +30,7 @@ def update_time(sample: Ancestor, ancestor: Ancestor, gen_time: np.ndarray):
         sample.time += gen_time[j]
 
 
-def update_ancestor(ancestor: Ancestor, children_list: List[T]):
+def _update_ancestor(ancestor: Ancestor, children_list: List[T]):
     """
     assigns new attributes to the merged ancestor
     """
@@ -29,6 +44,32 @@ def update_ancestor(ancestor: Ancestor, children_list: List[T]):
     for i in reversed(range(1, len(children_list))):
         children_list[i].next = children_list[i-1]
 
+
+def _update_data(data, data_index: int):
+    """
+    updates the data list
+    index ranges from 0 to number of statistics recorded
+    """
+    for index, value in data:
+        data[data_index][index] += value
+
+
+def _create_descendent_list(children_list: List[T]) -> List[Sample]:
+    """
+    replaces children in the children_list with the child's own descendant list
+    -> returns a new list with only Sample nodes
+    """
+    descendent_list = children_list[:]
+    i = 0
+    while i < len(descendent_list):
+        if descendent_list[i].is_sample():
+            i += 1
+        else:
+            size = len(descendent_list[i].descendent_list)
+            descendent_list[i:i] = descendent_list[i].descendent_list
+            del descendent_list[i+size]
+            i += size
+    return descendent_list
 
 def quicksort(children_list: List[T], first: int, last: int):
     """
@@ -58,20 +99,53 @@ def _partition(children_list: List[T], first: int, last: int) -> int:
     children_list[first], children_list[hi] = children_list[hi], part
     return hi
 
+def display_tree(root: T, verbose=False):
+    """
+    displays the tree's Newick representation
+    """
+    from Bio import Phylo
+    # from Bio import /
+    from io import StringIO
+    newick = _traversal(root)
+    tree = Phylo.read(StringIO(str(newick)), 'newick')
+    Phylo.draw(tree)
+    if verbose:
+        print("\n*** Displaying Each Tree Results ***")
+        print(newick)
+        print(tree)
 
-def _create_descendent_list(children_list: List[T]) -> List[Sample]:
+def _traversal(sample: T) -> str:
     """
-    replaces children in the children_list with the child's own descendant list
-    -> returns a new list with only Sample nodes
+    iterates through the tree rooted at the sample recursively in pre-order
+    builds up a Newick representation
     """
-    descendent_list = children_list[:]
-    i = 0
-    while i < len(descendent_list):
-        if descendent_list[i].is_sample():
-            i += 1
-        else:
-            size = len(descendent_list[i].descendent_list)
-            descendent_list[i:i] = descendent_list[i].descendent_list
-            del descendent_list[i+size]
-            i += size
-    return descendent_list
+    output = ''
+    current = sample.right
+    output = _recur_traversal((output + '('), current)
+    while current.next != sample.left:
+        current = current.next
+        output = _recur_traversal(output + ', ', current)
+    current = sample.left
+    output = _recur_traversal(output + ', ', current) + ')' + str(sample.identity)
+    return output
+
+
+def _recur_traversal(output: str, sample: T) -> str:
+    """
+    appends the sample's information to the current Newick format
+    recursively travels to the sample's (right) leaves
+    """
+    if sample.is_sample():
+        # output = output + str(sample.identity) + ':' + str(sample.mutations)
+        output = output + str(sample.identity) + ':' + str(sample.time)
+        return output
+    current = sample.right
+    output = _recur_traversal((output + '('), current)
+    while current.next != sample.left:
+        current = current.next
+        output = _recur_traversal(output + ', ', current)
+    current = sample.left
+    output = _recur_traversal((output + ', '), current)
+    # output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
+    output = output + ')' + str(sample.identity) + ':' + str(sample.time)
+    return output

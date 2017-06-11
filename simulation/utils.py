@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+
 from models import T
 
 __author__ = 'Jayeol Chun'
-
 
 def project_onto_plane(a, b):
     """
@@ -37,53 +37,5 @@ def display_stats(data):
     print("\t{}:\t{:.2f} vs {:.2f}".format("VAR", np.var(k), np.var(b)))
 
 
-def display_tree(root: T, verbose=False):
-    """
-    displays the tree's Newick representation
-    """
-    from Bio import Phylo
-    from io import StringIO
-    newick = _traversal(root)
-    tree = Phylo.read(StringIO(str(newick)), 'newick')
-    Phylo.draw(tree)
-    if verbose:
-        print("\n*** Displaying Each Tree Results ***")
-        print(newick)
-        print(tree)
 
 
-def _traversal(sample: T) -> str:
-    """
-    iterates through the tree rooted at the sample recursively in pre-order
-    builds up a Newick representation
-    """
-    output = ''
-    current = sample.right
-    output = _recur_traversal((output + '('), current)
-    while current.next != sample.left:
-        current = current.next
-        output = _recur_traversal(output + ', ', current)
-    current = sample.left
-    output = _recur_traversal(output + ', ', current) + ')' + str(sample.identity)
-    return output
-
-
-def _recur_traversal(output: str, sample: T) -> str:
-    """
-    appends the sample's information to the current Newick format
-    recursively travels to the sample's (right) leaves
-    """
-    if sample.is_sample():
-        # output = output + str(sample.identity) + ':' + str(sample.mutations)
-        output = output + str(sample.identity) + ':' + str(sample.time)
-        return output
-    current = sample.right
-    output = _recur_traversal((output + '('), current)
-    while current.next != sample.left:
-        current = current.next
-        output = _recur_traversal(output + ', ', current)
-    current = sample.left
-    output = _recur_traversal((output + ', '), current)
-    # output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
-    output = output + ')' + str(sample.identity) + ':' + str(sample.time)
-    return output
