@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import os
-import errno
-from typing import List, Tuple
-from abc import ABC, abstractmethod
 import pickle
+from abc import ABC, abstractmethod
+from typing import List, Tuple
+
 import numpy as np
+
 # from simulation import display_tree
-from .structure import Sample, Ancestor, T
+from .structure import Ancestor, T
 from .utils import quicksort, update_children, display_tree
 
 __author__ = 'Jayeol Chun'
@@ -17,7 +18,9 @@ TREE = ".tree"
 class CoalescentModel(ABC):
     def __init__(self):
         self.identity = ""
-        self.time_trees = {} # $num_iter number of trees for each sample size in the sample_sizes list
+        # $num_iter number of trees for each sample size in the sample_sizes list
+        # {15: [root1, root2, ...], ...}
+        self.time_trees = {}
 
     @abstractmethod
     def _F(self, n: int, rate: np.ndarray = None):
@@ -81,6 +84,33 @@ class CoalescentModel(ABC):
             print("Coalescing Complete.")
         return root
 
+    #TODO: Mutation
+    # def mutate(self):
+    #     self.mu_trees = {}
+    #     for n, trees in self.time_trees:
+    #         tmp = []
+    #
+    #         for root in trees:
+    #             # recursively apply mutation
+    #             new_root = root[:]
+    #
+    #             tmp.append()
+    #             # pass
+    #         self.mu_trees[n] = tmp
+    #
+    # def _mutate(self, node: Ancestor):
+    #
+    #     if node.is_sample():
+    #
+    #
+    #     return node
+
+
+    def plot_trees(self, verbose=False):
+        print("Plotting..")
+        for trees in self.time_trees.values():
+            for tree in trees:
+                display_tree(tree, verbose=verbose)
 
 
 

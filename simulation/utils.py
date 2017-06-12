@@ -2,8 +2,6 @@
 
 import numpy as np
 
-from models import T
-
 __author__ = 'Jayeol Chun'
 
 def project_onto_plane(a, b):

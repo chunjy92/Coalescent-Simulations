@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from typing import List
+
 import numpy as np
 from sklearn import preprocessing, metrics
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
+
 from .plot import plot_ROC_curve, plot_SVC_decision_function_histogram
 from .utils import display_stats
 

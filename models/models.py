@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from typing import Tuple
+
 import numpy as np
-from typing import List, Tuple
+
 from .model_template import CoalescentModel
 from .structure import *
 

@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
-from scipy.stats import poisson
 from typing import List
+import numpy as np
 from .structure import Sample, Ancestor, T
 
 __author__ = 'Jayeol Chun'
 
 
 def update_children(ancestor: Ancestor, children: List[T],
-                    gen_time: np.ndarray, verbose: bool = False):
+                    gen_time: np.ndarray, verbose=False):
     '''
     for each child node under ancestor, calculate time and mutation value
     '''
@@ -20,7 +19,6 @@ def update_children(ancestor: Ancestor, children: List[T],
 
     # Update new information to the ancestor
     _update_ancestor(ancestor, children)
-
 
 def _update_time(sample: T, ancestor: Ancestor, gen_time: np.ndarray):
     """
@@ -106,7 +104,7 @@ def display_tree(root: T, verbose=False):
     from Bio import Phylo
     # from Bio import /
     from io import StringIO
-    newick = _traversal(root)
+    newick = traverse(root)
     tree = Phylo.read(StringIO(str(newick)), 'newick')
     Phylo.draw(tree)
     if verbose:
@@ -114,23 +112,23 @@ def display_tree(root: T, verbose=False):
         print(newick)
         print(tree)
 
-def _traversal(sample: T) -> str:
+def traverse(sample: T) -> str:
     """
     iterates through the tree rooted at the sample recursively in pre-order
     builds up a Newick representation
     """
     output = ''
     current = sample.right
-    output = _recur_traversal((output + '('), current)
+    output = _recur_traverse((output + '('), current)
     while current.next != sample.left:
         current = current.next
-        output = _recur_traversal(output + ', ', current)
+        output = _recur_traverse(output + ', ', current)
     current = sample.left
-    output = _recur_traversal(output + ', ', current) + ')' + str(sample.identity)
+    output = _recur_traverse(output + ', ', current) + ')' + str(sample.identity)
     return output
 
 
-def _recur_traversal(output: str, sample: T) -> str:
+def _recur_traverse(output: str, sample: T) -> str:
     """
     appends the sample's information to the current Newick format
     recursively travels to the sample's (right) leaves
@@ -140,12 +138,12 @@ def _recur_traversal(output: str, sample: T) -> str:
         output = output + str(sample.identity) + ':' + str(sample.time)
         return output
     current = sample.right
-    output = _recur_traversal((output + '('), current)
+    output = _recur_traverse((output + '('), current)
     while current.next != sample.left:
         current = current.next
-        output = _recur_traversal(output + ', ', current)
+        output = _recur_traverse(output + ', ', current)
     current = sample.left
-    output = _recur_traversal((output + ', '), current)
+    output = _recur_traverse((output + ', '), current)
     # output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
     output = output + ')' + str(sample.identity) + ':' + str(sample.time)
     return output

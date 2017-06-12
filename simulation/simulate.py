@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from typing import List
+
 import numpy as np
+
 from models import M, Sample
-from .utils import display_params, display_stats
+from .utils import display_params
 
 __author__ = 'Jayeol Chun'
 
 
-def experiment(sample_size: int, num_test: int, mu: float, mu_thold: float, models: M, 
+def experiment(sample_size: int, num_test: int, mu: float, mu_thold: float, models: M,
                num_iter: int, graphics: bool=False, verbose: bool=False):
     '''
     single experiment handled by one process
@@ -129,6 +131,8 @@ def _simulate(models: M, num_iter: int, sample_size: int, mu: float, data: List[
 #                 break
 #
 #     return accurate_threshold_bbl, refined_mu
+
+
 
 
 def get_threshold(data, verbose=False):

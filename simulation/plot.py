@@ -5,9 +5,8 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn import metrics, decomposition
+from sklearn import metrics
 from sklearn.linear_model.logistic import LogisticRegression
-from .utils import project_onto_plane
 
 __author__ = 'Jayeol Chun'
 
