@@ -126,46 +126,46 @@ COLORS = ['magenta', 'cyan']
 #         plt.show()
 
 def plot_SVC_decision_function_histogram(SVC_dec, k_dec, b_dec):
-    """
-    plots histogram for the decision function produced by SVC
-    @param SVC_dec : 1-d Array - refer to return of get_decision_function
-    @param k_dec   : 1-d Array - refer to return of get_decision_function
-    @param b_dec   : 1-d Array - refer to return of get_decision_function
-    """
-    plt.figure()
-    bins = np.linspace(np.ceil(np.amin(SVC_dec))-10, np.ceil(np.amax(SVC_dec))+10, 100)
-    plt.hist(k_dec, bins, facecolor='magenta', alpha=0.5, label='Kingman')
-    plt.hist(b_dec, bins, facecolor='cyan', alpha=0.5, label='Bolthausen-Sznitman')
-    plt.title('Frequency of Decision Function Values')
-    plt.xlabel('Decision Function Value')
-    plt.ylabel('Frequencies')
-    plt.legend(loc='upper right')
-    plt.show()
+  """
+  plots histogram for the decision function produced by SVC
+  @param SVC_dec : 1-d Array - refer to return of get_decision_function
+  @param k_dec   : 1-d Array - refer to return of get_decision_function
+  @param b_dec   : 1-d Array - refer to return of get_decision_function
+  """
+  plt.figure()
+  bins = np.linspace(np.ceil(np.amin(SVC_dec))-10, np.ceil(np.amax(SVC_dec))+10, 100)
+  plt.hist(k_dec, bins, facecolor='magenta', alpha=0.5, label='Kingman')
+  plt.hist(b_dec, bins, facecolor='cyan', alpha=0.5, label='Bolthausen-Sznitman')
+  plt.title('Frequency of Decision Function Values')
+  plt.xlabel('Decision Function Value')
+  plt.ylabel('Frequencies')
+  plt.legend(loc='upper right')
+  plt.show()
 
 def plot_ROC_curve(X_train_scaled, X_test_scaled, y_train, y_test):
-    """
-    plots ROC Curve
-    @param X_train_scaled : 2-d Array  - refer to return of scale_X
-    @param X_test_scaled  : 2-d Array  - refer to return of scale_X
-    @param y_train        : 1-d Array  - refer to return of preprocess_data
-    @param y_test         : 1-d Array  - refer to return of preprocess_data
-    """
-    lr_clf = LogisticRegression()
-    lr_clf.fit(X_train_scaled, y_train)
-    pred_ROC = lr_clf.predict_proba(X_test_scaled)
-    false_positive_rate, recall, thresholds = metrics.roc_curve(y_test, pred_ROC[:,1])
-    roc_auc = metrics.auc(false_positive_rate, recall)
+  """
+  plots ROC Curve
+  @param X_train_scaled : 2-d Array  - refer to return of scale_X
+  @param X_test_scaled  : 2-d Array  - refer to return of scale_X
+  @param y_train        : 1-d Array  - refer to return of preprocess_data
+  @param y_test         : 1-d Array  - refer to return of preprocess_data
+  """
+  lr_clf = LogisticRegression()
+  lr_clf.fit(X_train_scaled, y_train)
+  pred_ROC = lr_clf.predict_proba(X_test_scaled)
+  false_positive_rate, recall, thresholds = metrics.roc_curve(y_test, pred_ROC[:,1])
+  roc_auc = metrics.auc(false_positive_rate, recall)
 
-    plt.figure()
-    plt.title('Receiver Operating Chraracteristic (ROC) Curve')
-    plt.plot(false_positive_rate, recall, 'b', label='AUC = {:.2f}'.format(roc_auc))
-    plt.legend(loc='lower right')
-    plt.plot([0, 1], [0, 1], 'r--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.0])
-    plt.xlabel('Fall-Out')
-    plt.ylabel('Recall')
-    plt.show()
+  plt.figure()
+  plt.title('Receiver Operating Chraracteristic (ROC) Curve')
+  plt.plot(false_positive_rate, recall, 'b', label='AUC = {:.2f}'.format(roc_auc))
+  plt.legend(loc='lower right')
+  plt.plot([0, 1], [0, 1], 'r--')
+  plt.xlim([0.0, 1.0])
+  plt.ylim([0.0, 1.0])
+  plt.xlabel('Fall-Out')
+  plt.ylabel('Recall')
+  plt.show()
 
 # def perform_pca(SVC_dec, X_test_raw, y_test, coef, model_list, three_d=False):
 #     """

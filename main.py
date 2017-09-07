@@ -17,16 +17,16 @@ __author__ = 'Jayeol Chun'
 STATS  = ['Bottom Branch Length']
 
 
-def test(sample_size: int, mu: float, num_iter: int, graphics=False, verbose=False):
-
-    display_params((sample_size, mu, num_iter))
-    data = [np.zeros((num_iter, len(STATS))) for _ in range(len(MODELS))]
-
-    # single simulation
-    simulate(MODELS, num_iter, sample_size, mu, data, exp=False, graphics=graphics, verbose=verbose)
-
-    display_stats(data)
-    if num_iter >= 10: analyze(data, graphics=graphics)
+# def test(sample_size: int, mu: float, num_iter: int, graphics=False, verbose=False):
+#
+#   display_params((sample_size, mu, num_iter))
+#   data = [np.zeros((num_iter, len(STATS))) for _ in range(len(MODELS))]
+#
+#   # single simulation
+#   simulate(MODELS, num_iter, sample_size, mu, data, exp=False, graphics=graphics, verbose=verbose)
+#
+#   display_stats(data)
+#   if num_iter >= 10: analyze(data, graphics=graphics)
 
 
 # def etc(sample_size: int, sample_size_end: int, sample_size_step: int, mu: float, mu_thold: float, num_iter: int,
@@ -73,24 +73,24 @@ def test(sample_size: int, mu: float, num_iter: int, graphics=False, verbose=Fal
 
 
 def main(config):
-    tic = time.time()
-    print("******* Coalescent Simulations Main *******")
+  tic = time.time()
+  print("******* Coalescent Simulations Main *******")
 
-    if config.test:
-        print("Testing Mode")
-        models = generate_trees([config.sample_size], config.num_iter, output_dir=config.output_dir)
-    elif config.input_dir:
-        models = load_trees(config.input_dir)
-    else:
-        if config.sample_size_end <= config.sample_size:
-            config.sample_size_end = config.sample_size + (config.sample_size_step*3) + 1  # arbitrary, run 3 different choices
-        sample_sizes = list(range(config.sample_size, config.sample_size_end, config.sample_size_step))
-        models = generate_trees(sample_sizes, config.num_iter, num_proc=config.num_proc,
-                                output_dir=config.output_dir)
+  if config.test:
+    print("Testing Mode")
+    models = generate_trees([config.sample_size], config.num_iter, output_dir=config.output_dir)
+  elif config.input_dir:
+    models = load_trees(config.input_dir)
+  else:
+    if config.sample_size_end <= config.sample_size:
+      config.sample_size_end = config.sample_size + (config.sample_size_step*3) + 1  # arbitrary, run 3 different choices
+    sample_sizes = list(range(config.sample_size, config.sample_size_end, config.sample_size_step))
+    models = generate_trees(sample_sizes, config.num_iter, num_proc=config.num_proc,
+                            output_dir=config.output_dir, verbose=config.verbose)
 
-    # At this point, we have time trees. Now apply mutation...
+  # At this point, we have time trees. Now apply mutation...
 
-    print("\n******* Program Execution Time: {:.2f} s *******".format(time.time()-tic))
+  print("\n******* Program Execution Time: {:.2f} s *******".format(time.time()-tic))
 
 if __name__ == '__main__':
-    main(get_config())
+  main(get_config())

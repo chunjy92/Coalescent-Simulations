@@ -40,5 +40,7 @@ flags.add_argument("--verbose", action="store_true",
                    help="increase output verbosity")
 
 def get_config():
-    config, _ = parser.parse_known_args()
-    return config
+  config, _ = parser.parse_known_args()
+
+  return config
+
