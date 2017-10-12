@@ -9,7 +9,7 @@ import numpy as np
 
 from models import MODELS
 from simulation import simulate, experiment, analyze, display_params, display_stats
-from tree_utils import load_trees, generate_trees
+from tree_utils import load_trees, generate_trees, apply_mutation, threshold
 from config import get_config
 
 __author__ = 'Jayeol Chun'
@@ -89,6 +89,12 @@ def main(config):
                             output_dir=config.output_dir, verbose=config.verbose)
 
   # At this point, we have time trees. Now apply mutation...
+  apply_mutation(models, config.mu)
+
+  # now model.trees contains mutated tree
+  # Now apply thresholding..
+  threshold(models)
+
 
   print("\n******* Program Execution Time: {:.2f} s *******".format(time.time()-tic))
 

@@ -14,8 +14,8 @@ population.add_argument("-s", "--sample_size_step", nargs='?', default=3, type=i
 population.add_argument("-m", "--mu", nargs='?', default=0.5, type=float,
                         help="init mutation rate value, subject to change in experiment. "
                          "The value is final for testing")
-population.add_argument("-o", "--mu_th", nargs='?', default=5.0, type=float,
-                        help="mu range step unit for experiment") # arbitrary..
+# population.add_argument("-o", "--mu_th", nargs='?', default=5.0, type=float,
+#                         help="mu range step unit for experiment") # arbitrary..
 
 sims = parser.add_argument_group('Simulation & Experiment Variables')
 sims.add_argument("-i", "--num_iter", nargs='?', default=3, type=int,

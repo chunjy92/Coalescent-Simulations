@@ -115,14 +115,14 @@ def _partition(children_list: List[T], first: int, last: int) -> int:
   children_list[first], children_list[hi] = children_list[hi], part
   return hi
 
-def display_tree(root: T, verbose=False):
+def display_tree(root: T, time_mode=True, verbose=False):
   """
   displays the tree's Newick representation
   """
   from Bio import Phylo
   # from Bio import /
   from io import StringIO
-  newick = traverse(root)
+  newick = traverse(root, time_mode=time_mode)
   tree = Phylo.read(StringIO(str(newick)), 'newick')
   Phylo.draw(tree)
   # if verbose:
@@ -130,40 +130,46 @@ def display_tree(root: T, verbose=False):
   print(newick)
   print(tree)
 
-def traverse(sample: T) -> str:
+def traverse(sample: T, time_mode) -> str:
   """
   iterates through the tree rooted at the sample recursively in pre-order
   builds up a Newick representation
   """
   output = ''
   current = sample.right
-  output = _recur_traverse((output + '('), current)
+  output = _recur_traverse((output + '('), current, time_mode=time_mode)
   while current.next != sample.left:
     current = current.next
-    output = _recur_traverse(output + ', ', current)
+    output = _recur_traverse(output + ', ', current, time_mode=time_mode)
   current = sample.left
-  output = _recur_traverse(output + ', ', current) + ')' + str(sample.identity)
+  output = _recur_traverse(output + ', ', current, time_mode=time_mode) + ')' + str(sample.identity)
   return output
 
 
-def _recur_traverse(output: str, sample: T) -> str:
+def _recur_traverse(output: str, sample: T, time_mode) -> str:
   """
   appends the sample's information to the current Newick format
   recursively travels to the sample's (right) leaves
   """
   if sample.is_sample():
     # output = output + str(sample.identity) + ':' + str(sample.mutations)
-    output = output + str(sample.identity) + ':' + str(sample.time)
+    if time_mode:
+      output = output + str(sample.identity) + ':' + str(sample.time)
+    else:
+      output = output + str(sample.identity) + ':' + str(sample.mutations)
     return output
   current = sample.right
-  output = _recur_traverse((output + '('), current)
+  output = _recur_traverse((output + '('), current, time_mode=time_mode)
   while current.next != sample.left:
     current = current.next
-    output = _recur_traverse(output + ', ', current)
+    output = _recur_traverse(output + ', ', current, time_mode=time_mode)
   current = sample.left
-  output = _recur_traverse((output + ', '), current)
+  output = _recur_traverse((output + ', '), current, time_mode=time_mode)
   # output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
-  output = output + ')' + str(sample.identity) + ':' + str(sample.time)
+  if time_mode:
+    output = output + ')' + str(sample.identity) + ':' + str(sample.time)
+  else:
+    output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
   return output
 
 
