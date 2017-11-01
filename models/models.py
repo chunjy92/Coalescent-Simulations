@@ -15,11 +15,13 @@ class Kingman(CoalescentModel):
     super().__init__()
     self.identity = 'K'
 
+
   def _F(self, n: int, rate=None) -> float:
     '''
     Kingman Function
     '''
     return n * (n-1) / 2
+
 
   def _coalesce_aux(self, coalescent_list):
     time = np.random.exponential(1 / self._F(len(coalescent_list)))
@@ -30,6 +32,7 @@ class BolthausenSznitman(CoalescentModel):
   def __init__(self):
     super().__init__()
     self.identity = 'B'
+
 
   def _F(self, n: int, rate: np.ndarray=None) -> Tuple[np.ndarray, float]:
     """
@@ -43,6 +46,7 @@ class BolthausenSznitman(CoalescentModel):
       total_rate += i_rate
     return rate, total_rate
 
+
   def _coalesce_aux(self, coalescent_list):
     l = len(coalescent_list)
     m_list = np.arange(2, l+1)
@@ -54,7 +58,6 @@ class BolthausenSznitman(CoalescentModel):
     num_children = np.random.choice(m_list, 1, replace=False, p=bsf_rate)
     time = np.random.exponential(1/total_rate)
     return time, num_children
-
 
 M = TypeVar('M', Kingman, BolthausenSznitman)
 MODELS = [Kingman, BolthausenSznitman]

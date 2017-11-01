@@ -9,7 +9,7 @@ import numpy as np
 
 # from simulation import display_tree
 from .structure import Ancestor, T
-from .utils import nCr, quicksort, update_children, display_tree
+from .utils import quicksort, update_children, display_tree
 
 __author__ = 'Jayeol Chun'
 
@@ -20,7 +20,8 @@ class CoalescentModel(ABC):
     self.identity = ""
     # $num_iter number of trees for each sample size in the sample_sizes list
     # {15: [root1, root2, ...], ...}
-    self.time_trees = {}
+    self.trees = {}
+    self.bbl   = {}
 
 
   @abstractmethod
@@ -35,13 +36,13 @@ class CoalescentModel(ABC):
     '''
     :param path: path to the folder where the model is to be saved
     '''
-    print("Saving to", path)
+    print("Saving to", path, "for", self.identity)
     if not os.path.exists(path):
       os.makedirs(path, exist_ok=True)
     filename = self.identity + TREE
     out_path = os.path.join(path, filename)
     with open(out_path, 'wb') as f:
-      pickle.dump(self.time_trees, f, protocol=pickle.HIGHEST_PROTOCOL)
+      pickle.dump(self.trees, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
   def _merge(self, coalescent_list: List[T], merge_identity: int, num_children: int=2) -> Tuple[Ancestor, List[T]]:
@@ -89,33 +90,9 @@ class CoalescentModel(ABC):
       # print("Avg:", mean_pairwise_dist / (sample_size + num_coalescent_event))
     return root
 
-  #TODO: Mutation
-  # def mutate(self):
-  #     self.mu_trees = {}
-  #     for n, trees in self.time_trees:
-  #         tmp = []
-  #
-  #         for root in trees:
-  #             # recursively apply mutation
-  #             new_root = root[:]
-  #
-  #             tmp.append()
-  #             # pass
-  #         self.mu_trees[n] = tmp
-  #
-  # def _mutate(self, node: Ancestor):
-  #
-  #     if node.is_sample():
-  #
-  #
-  #     return node
-
 
   def plot_trees(self, verbose=False):
     print("Plotting..")
-    for trees in self.time_trees.values():
+    for trees in self.trees.values():
       for tree in trees:
         display_tree(tree, verbose=verbose)
-
-
-

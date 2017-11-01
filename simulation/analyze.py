@@ -7,7 +7,7 @@ from sklearn import preprocessing, metrics
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
-from .plot import plot_ROC_curve, plot_SVC_decision_function_histogram
+# from .plot import plot_ROC_curve, plot_SVC_decision_function_histogram
 from .utils import display_stats
 
 __author__ = 'Jayeol Chun'
@@ -28,12 +28,12 @@ def analyze(data: List[np.ndarray], graphics=False):
 
   if graphics:
     print("\nPlotting Decision Function Histogram...")
-    plot_SVC_decision_function_histogram(clf_dec, clf_dec[y_test == 0], clf_dec[y_test == 1])
-    print("Done.")
-
-    print("\nPlotting ROC Curve...")
-    plot_ROC_curve(X_train, X_test, y_train, y_test)
-    print("Done.")
+    # plot_SVC_decision_function_histogram(clf_dec, clf_dec[y_test == 0], clf_dec[y_test == 1])
+    # print("Done.")
+    #
+    # print("\nPlotting ROC Curve...")
+    # plot_ROC_curve(X_train, X_test, y_train, y_test)
+    # print("Done.")
 
   y_pred = clf.predict(X_test)
   print("\nTest Set Accuracy: {:.2f}%".format(metrics.accuracy_score(y_test, y_pred) * 100))

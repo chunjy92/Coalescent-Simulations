@@ -171,5 +171,3 @@ def _recur_traverse(output: str, sample: T, time_mode) -> str:
   else:
     output = output + ')' + str(sample.identity) + ':' + str(sample.mutations)
   return output
-
-

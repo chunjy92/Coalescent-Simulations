@@ -1,6 +1,9 @@
 import unittest
+
 import numpy as np
-from tree_utils import generate_trees
+
+from simulation.tree_utils import generate_trees
+
 
 class MyTestCase(unittest.TestCase):
   def test_average_distance(self):
