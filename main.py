@@ -2,7 +2,7 @@
 import time
 
 from config import get_config
-from simulation import Simulation
+from simulation import Simulation, experiment
 
 __author__ = 'Jayeol Chun'
 
@@ -17,7 +17,9 @@ def main(config):
   coalSim.setup()
 
   # run experiments
-  coalSim.run()
+  # coalSim.run()
+  experiment(coalSim.models, coalSim.mu, coalSim.mu_step)
+
 
   # save model
   coalSim.save()

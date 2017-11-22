@@ -7,7 +7,7 @@ from functools import partial
 from multiprocessing import Pool
 
 from models import MODELS
-from simulation import simulate
+from simulation import simulate, experiment
 
 __author__ = 'Jayeol Chun'
 
@@ -42,9 +42,11 @@ class Simulation(object):
     self.no_exp   = config.no_exp
 
 
-  def run(self):
-    print("[*] Begin experiment..")
-    pass
+  # def run(self):
+  #   print("[*] Begin experiment..")
+  #   _log = experiment(self.models, self.mu, self.mu_step)
+  #   print("??")
+  #   print(_log)
 
 
   def save(self):

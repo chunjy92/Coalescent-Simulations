@@ -12,11 +12,10 @@ __author__ = 'Jayeol Chun'
 
 DONE = []
 
-def experiment(models, config):
+def experiment(models, mu_, mu_step):
   print("[*] Begin experimenting..")
   log_data = {}
-  mu = config.mu
-  mu_step = config.mu_step
+  mu = mu_
 
   while mu < 5.0:
     print("Current Mu:", mu)
